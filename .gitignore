@@ -1,0 +1,14 @@
+# Coretime Clicker
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Rust / ink! artifacts
+contracts/coretime_clicker/target/
+substrate-contracts-node/
+
+# Misc
+.DS_Store
+*.log
