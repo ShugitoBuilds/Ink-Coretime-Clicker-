@@ -19,6 +19,8 @@ import {
   ENERGY_REGEN_INTERVAL_MS,
   RENTAL_DURATION_BLOCKS,
   RENTAL_STORAGE_PREFIX,
+  RENT_COST,
+  TOKEN_SYMBOL,
   USE_MOCK,
 } from "../config";
 import {
@@ -26,6 +28,7 @@ import {
   boomDetails,
   calculateRewardPreview,
 } from "../lib/gameClient";
+import { formatTokens } from "../lib/units";
 import type {
   CoreRental,
   GameContextValue,
@@ -68,6 +71,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [rentals, setRentals] = useState<CoreRental[]>([]);
   const [energy, setEnergy] = useState<number>(ENERGY_MAX);
   const [nextEnergyAt, setNextEnergyAt] = useState<number | null>(null);
+  const [balance, setBalance] = useState<bigint>(0n);
   const energyTimerRef = useRef<number | null>(null);
   const latestBlockRef = useRef<number>(0);
 
@@ -122,6 +126,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     success: null as string | null,
   });
 
+  const [depositState, setDepositState] = useState({
+    isLoading: false,
+    error: null as string | null,
+    success: null as string | null,
+  });
+
+  const [withdrawState, setWithdrawState] = useState({
+    isLoading: false,
+    error: null as string | null,
+    success: null as string | null,
+  });
+
   useEffect(() => {
     if (!player) return;
 
@@ -146,6 +162,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setRentals([]);
       setEnergy(ENERGY_MAX);
       setNextEnergyAt(null);
+      setBalance(0n);
       return;
     }
 
@@ -232,6 +249,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!selectedAccount) {
       setPlayer(null);
       setIsReady(false);
+      setBalance(0n);
       return;
     }
 
@@ -304,13 +322,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [isConnected, usingMock]);
 
   const pullStatusFromChain = useCallback(async () => {
-    if (!selectedAccount || usingMock) {
+    if (!selectedAccount) {
+      return;
+    }
+
+    if (usingMock) {
+      setChainError(null);
       return;
     }
 
     try {
-      const { status } = await gameClient.queryPlayer(selectedAccount);
+      const [{ status }, latestBalance] = await Promise.all([
+        gameClient.queryPlayer(selectedAccount),
+        gameClient.getBalance(selectedAccount),
+      ]);
       setPlayer(status);
+      setBalance(latestBalance);
       setChainError(null);
     } catch (error) {
       const message =
@@ -380,6 +407,25 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             return "";
           };
 
+          const toBigInt = (value: unknown): bigint | null => {
+            if (value === null || value === undefined) return null;
+            try {
+              if (typeof value === "bigint") return value;
+              if (typeof value === "number") return BigInt(value);
+              if (typeof value === "string") return BigInt(value);
+              if (
+                typeof value === "object" &&
+                value !== null &&
+                "toString" in value
+              ) {
+                return BigInt((value as { toString: () => string }).toString());
+              }
+            } catch (error) {
+              console.warn("Failed to convert bigint", error, value);
+            }
+            return null;
+          };
+
           if (event.name === "CoreRented") {
             const accountAddress = extractAddress(event.args.player);
             if (
@@ -417,6 +463,20 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
                 }
                 return next;
               });
+
+               const balanceRemaining =
+                 toBigInt(
+                   event.args.balance_remaining ??
+                     event.args.balanceRemaining ??
+                     event.args.remainingBalance,
+                 ) ??
+                 null;
+
+               if (balanceRemaining !== null) {
+                 setBalance(balanceRemaining);
+               } else {
+                 setBalance((prev) => (prev > RENT_COST ? prev - RENT_COST : 0n));
+               }
             }
           }
 
@@ -429,6 +489,36 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
               setRentals((prev) =>
                 prev.filter((rental) => rental.status !== "matured"),
               );
+            }
+          }
+
+          if (event.name === "BalanceDeposited") {
+            const accountAddress = extractAddress(event.args.player);
+            if (
+              selectedAccount &&
+              accountAddress === selectedAccount.address
+            ) {
+              const newBalance =
+                toBigInt(event.args.new_balance ?? event.args.newBalance) ??
+                null;
+              if (newBalance !== null) {
+                setBalance(newBalance);
+              }
+            }
+          }
+
+          if (event.name === "BalanceWithdrawn") {
+            const accountAddress = extractAddress(event.args.player);
+            if (
+              selectedAccount &&
+              accountAddress === selectedAccount.address
+            ) {
+              const newBalance =
+                toBigInt(event.args.new_balance ?? event.args.newBalance) ??
+                null;
+              if (newBalance !== null) {
+                setBalance(newBalance);
+              }
             }
           }
 
@@ -503,6 +593,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    if (!usingMock && balance < RENT_COST) {
+      setRentState({
+        isLoading: false,
+        error: "Prepaid balance too low. Deposit more to rent cores.",
+        success: null,
+      });
+      return;
+    }
+
     if (energy < ENERGY_PER_RENT) {
       setRentState({
         isLoading: false,
@@ -563,6 +662,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             lastUpdatedAt: Date.now(),
           };
         });
+        setBalance((prev) => (prev > RENT_COST ? prev - RENT_COST : 0n));
       } else {
         if (!extension) {
           throw new Error("Wallet signer not available.");
@@ -571,6 +671,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         await gameClient.rentCore(selectedAccount, extension);
         const latestBlock = await gameClient.getBlockNumber();
         activateRental(latestBlock);
+        setBalance((prev) => (prev > RENT_COST ? prev - RENT_COST : 0n));
         await pullStatusFromChain();
       }
 
@@ -598,6 +699,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     gameClient,
     pullStatusFromChain,
     refundEnergy,
+    balance,
   ]);
 
   const claimReward = useCallback(async () => {
@@ -699,6 +801,115 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     pullStatusFromChain,
   ]);
 
+  const deposit = useCallback(
+    async (amount: bigint) => {
+      if (!selectedAccount) {
+        setDepositState({
+          isLoading: false,
+          error: "Connect wallet first",
+          success: null,
+        });
+        return;
+      }
+
+      if (amount <= 0n) {
+        setDepositState({
+          isLoading: false,
+          error: "Enter a positive amount",
+          success: null,
+        });
+        return;
+      }
+
+      setDepositState({ isLoading: true, error: null, success: null });
+
+      try {
+        if (usingMock) {
+          setBalance((prev) => prev + amount);
+        } else {
+          if (!extension) {
+            throw new Error("Wallet signer not available.");
+          }
+          await gameClient.deposit(selectedAccount, extension, amount);
+          setBalance((prev) => prev + amount);
+        }
+
+        setDepositState({
+          isLoading: false,
+          error: null,
+          success: `Deposited ${formatTokens(amount)}`,
+        });
+      } catch (err) {
+        setDepositState({
+          isLoading: false,
+          error:
+            err instanceof Error ? err.message : "Failed to deposit balance",
+          success: null,
+        });
+      }
+    },
+    [selectedAccount, usingMock, extension, gameClient],
+  );
+
+  const withdraw = useCallback(
+    async (amount: bigint) => {
+      if (!selectedAccount) {
+        setWithdrawState({
+          isLoading: false,
+          error: "Connect wallet first",
+          success: null,
+        });
+        return;
+      }
+
+      if (amount <= 0n) {
+        setWithdrawState({
+          isLoading: false,
+          error: "Enter a positive amount",
+          success: null,
+        });
+        return;
+      }
+
+      if (!usingMock && balance < amount) {
+        setWithdrawState({
+          isLoading: false,
+          error: "Amount exceeds prepaid balance",
+          success: null,
+        });
+        return;
+      }
+
+      setWithdrawState({ isLoading: true, error: null, success: null });
+
+      try {
+        if (usingMock) {
+          setBalance((prev) => (prev > amount ? prev - amount : 0n));
+        } else {
+          if (!extension) {
+            throw new Error("Wallet signer not available.");
+          }
+          await gameClient.withdraw(selectedAccount, extension, amount);
+          setBalance((prev) => (prev > amount ? prev - amount : 0n));
+        }
+
+        setWithdrawState({
+          isLoading: false,
+          error: null,
+          success: `Withdrawn ${formatTokens(amount)}`,
+        });
+      } catch (err) {
+        setWithdrawState({
+          isLoading: false,
+          error:
+            err instanceof Error ? err.message : "Failed to withdraw balance",
+          success: null,
+        });
+      }
+    },
+    [selectedAccount, usingMock, balance, extension, gameClient],
+  );
+
   const refreshStatus = useCallback(async () => {
     if (usingMock) {
       setPlayer((prev) => {
@@ -725,6 +936,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       isReady,
       blockHeight,
       rentals,
+      balance,
+      rentCost: RENT_COST,
+      tokenSymbol: TOKEN_SYMBOL,
       energy,
       maxEnergy: ENERGY_MAX,
       nextEnergyAt,
@@ -736,11 +950,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       connectWallet,
       rentCore,
       claimReward,
+      deposit,
+      withdraw,
       refreshStatus,
       actions: {
         connect: connectState,
         rent: rentState,
         claim: claimState,
+        deposit: depositState,
+        withdraw: withdrawState,
       },
     }),
     [
@@ -748,6 +966,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       isReady,
       blockHeight,
       rentals,
+      balance,
       energy,
       nextEnergyAt,
       boomMessage,
@@ -757,10 +976,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       connectWallet,
       rentCore,
       claimReward,
+      deposit,
+      withdraw,
       refreshStatus,
       connectState,
       rentState,
       claimState,
+      depositState,
+      withdrawState,
     ],
   );
 

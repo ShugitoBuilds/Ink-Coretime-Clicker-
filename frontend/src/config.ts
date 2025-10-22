@@ -49,3 +49,14 @@ export const RENTAL_DURATION_BLOCKS = Number(
 export const RENTAL_STORAGE_PREFIX =
   import.meta.env.VITE_RENTAL_STORAGE_PREFIX ??
   "coretime-clicker::rentals";
+
+export const TOKEN_DECIMALS = Number(
+  import.meta.env.VITE_TOKEN_DECIMALS ?? 12,
+);
+
+export const TOKEN_SYMBOL =
+  import.meta.env.VITE_TOKEN_SYMBOL ?? "UNIT";
+
+export const RENT_COST = BigInt(
+  import.meta.env.VITE_RENT_COST ?? "1000000000000",
+);

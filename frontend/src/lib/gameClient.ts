@@ -8,6 +8,7 @@ import {
   ELASTIC_BOOM_CLAIMS,
   ELASTIC_BOOM_MULTIPLIER,
   MATURITY_BLOCKS,
+  RENT_COST,
 } from "../config";
 import type { PlayerStatus } from "../types/game";
 import type { WalletAccount } from "../types/wallet";
@@ -70,6 +71,7 @@ const toPlayerStatus = (
 
 export class GameClient {
   private api: ApiPromise | null = null;
+  readonly rentCost = RENT_COST;
 
   async init() {
     if (!CONTRACT_ADDRESS) {
@@ -303,6 +305,124 @@ export class GameClient {
 
   async disconnect() {
     await disconnectApi();
+  }
+
+  async getBalance(account: WalletAccount): Promise<bigint> {
+    const api = await this.ensureApi();
+    const contract = await getContract();
+    const balanceQuery =
+      contract.query["balance_of"] ?? contract.query["balanceOf"];
+
+    if (!balanceQuery) {
+      throw new Error("balance_of message not found in metadata.");
+    }
+
+    const result = (await balanceQuery(
+      account.address,
+      {
+        gasLimit: api.registry.createType("WeightV2", {
+          refTime: new BN(10000000000),
+          proofSize: new BN(1000000),
+        }),
+        storageDepositLimit: null,
+        value: 0,
+      },
+      account.address,
+    )) as any;
+
+    if (result.result?.isErr) {
+      throw new Error(result.result.asErr.toString());
+    }
+
+    return BigInt(result.output?.toString?.() ?? 0);
+  }
+
+  async deposit(
+    account: WalletAccount,
+    extension: InjectedExtension,
+    amount: bigint,
+  ): Promise<void> {
+    const api = await this.ensureApi();
+    const contract = await getContract();
+    const { signer } = await withSigner(extension, account.address);
+
+    const gasLimit = api.registry.createType("WeightV2", {
+      refTime: new BN(20000000000),
+      proofSize: new BN(4000000),
+    });
+
+    const depositTx = contract.tx["deposit"];
+
+    if (!depositTx) {
+      throw new Error("deposit message not available in metadata.");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      depositTx({
+        gasLimit,
+        storageDepositLimit: null,
+        value: new BN(amount.toString()),
+      })
+        .signAndSend(
+          account.address,
+          { signer },
+          ({ status, dispatchError }) => {
+            if (dispatchError) {
+              reject(dispatchError);
+              return;
+            }
+
+            if (status.isInBlock || status.isFinalized) {
+              resolve();
+            }
+          },
+        )
+        .catch(reject);
+    });
+  }
+
+  async withdraw(
+    account: WalletAccount,
+    extension: InjectedExtension,
+    amount: bigint,
+  ): Promise<void> {
+    const api = await this.ensureApi();
+    const contract = await getContract();
+    const { signer } = await withSigner(extension, account.address);
+
+    const gasLimit = api.registry.createType("WeightV2", {
+      refTime: new BN(20000000000),
+      proofSize: new BN(4000000),
+    });
+
+    const withdrawTx = contract.tx["withdraw"];
+
+    if (!withdrawTx) {
+      throw new Error("withdraw message not available in metadata.");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      withdrawTx({
+        gasLimit,
+        storageDepositLimit: null,
+        value: 0,
+      }, new BN(amount.toString()))
+        .signAndSend(
+          account.address,
+          { signer },
+          ({ status, dispatchError }) => {
+            if (dispatchError) {
+              reject(dispatchError);
+              return;
+            }
+
+            if (status.isInBlock || status.isFinalized) {
+              resolve();
+            }
+          },
+        )
+        .catch(reject);
+    });
   }
 }
 

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { useGame } from "../context/GameContext";
 import type { CoreRental } from "../types/game";
+import { formatTokens, parseTokens } from "../lib/units";
 
 const formatBalance = (value: bigint) => {
   if (value === 0n) return "0";
@@ -16,9 +17,14 @@ const RentPanel = () => {
     energy,
     maxEnergy,
     nextEnergyAt,
+    balance,
+    rentCost,
+    tokenSymbol,
     rentCore,
     claimReward,
-    actions: { rent, claim },
+    deposit,
+    withdraw,
+    actions: { rent, claim, deposit: depositAction, withdraw: withdrawAction },
     isBoomActive,
     boomMessage,
     refreshStatus,
@@ -31,6 +37,13 @@ const RentPanel = () => {
     if (!player) return true;
     return player.pendingReward === 0n || claim.isLoading;
   }, [player, claim.isLoading]);
+
+  const rentDisabled = useMemo(() => {
+    if (rent.isLoading) return true;
+    if (energy <= 0) return true;
+    if (balance < rentCost) return true;
+    return false;
+  }, [rent.isLoading, energy, balance, rentCost]);
 
   const rentalGroups = useMemo(() => {
     const grouped: Record<CoreRental["status"], CoreRental[]> = {
@@ -64,6 +77,34 @@ const RentPanel = () => {
     return Math.ceil(diff / 1000);
   }, [nextEnergyAt]);
 
+  const handleDeposit = () => {
+    const input = window.prompt(
+      `Enter amount to deposit (${tokenSymbol}):`,
+      "1",
+    );
+    if (!input) return;
+    const parsed = parseTokens(input);
+    if (parsed === null || parsed <= 0n) {
+      window.alert("Invalid amount");
+      return;
+    }
+    void deposit(parsed);
+  };
+
+  const handleWithdraw = () => {
+    const input = window.prompt(
+      `Enter amount to withdraw (${tokenSymbol}):`,
+      "1",
+    );
+    if (!input) return;
+    const parsed = parseTokens(input);
+    if (parsed === null || parsed <= 0n) {
+      window.alert("Invalid amount");
+      return;
+    }
+    void withdraw(parsed);
+  };
+
   return (
     <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg shadow-primary/25">
       <div className="pointer-events-none absolute -left-10 -top-24 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
@@ -80,6 +121,34 @@ const RentPanel = () => {
       <div className="relative mt-6 grid gap-4">
         <div className="rounded-xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-center justify-between text-sm text-gray-300">
+            <span>Prepaid balance</span>
+            <span className="font-mono">{formatTokens(balance)}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleDeposit}
+              disabled={depositAction.isLoading}
+              className="rounded-full border border-primary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary transition hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {depositAction.isLoading ? "Depositing…" : "Deposit"}
+            </button>
+            <button
+              type="button"
+              onClick={handleWithdraw}
+              disabled={withdrawAction.isLoading || balance === 0n}
+              className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {withdrawAction.isLoading ? "Withdrawing…" : "Withdraw"}
+            </button>
+            <span className="self-center text-[10px] uppercase tracking-wide text-gray-500">
+              Rent cost: {formatTokens(rentCost)}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-center justify-between text-sm text-gray-300">
             <span>Energy</span>
             <span className="font-mono">
               {energy}/{maxEnergy}
@@ -94,7 +163,7 @@ const RentPanel = () => {
             />
           </div>
           <p className="mt-2 text-xs text-gray-400">
-            Costs 1 energy per rental.{" "}
+            Costs 1 energy per rental. {" "}
             {energy >= maxEnergy
               ? "Energy full."
               : nextEnergySeconds !== null
@@ -105,13 +174,15 @@ const RentPanel = () => {
 
         <button
           onClick={rentCore}
-          disabled={rent.isLoading || energy <= 0}
+          disabled={rentDisabled}
           className="w-full rounded-lg bg-primary px-6 py-4 text-lg font-semibold text-bg-dark transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {rent.isLoading
             ? "Renting…"
             : energy <= 0
             ? "Charging…"
+            : balance < rentCost
+            ? "Add balance"
             : "Rent Core 🚀"}
         </button>
 
@@ -214,6 +285,18 @@ const RentPanel = () => {
           <p className="text-xs text-red-400">
             {rent.error ?? claim.error}
           </p>
+        )}
+        {depositAction.error && (
+          <p className="text-xs text-red-400">{depositAction.error}</p>
+        )}
+        {depositAction.success && (
+          <p className="text-xs text-emerald-400">{depositAction.success}</p>
+        )}
+        {withdrawAction.error && (
+          <p className="text-xs text-red-400">{withdrawAction.error}</p>
+        )}
+        {withdrawAction.success && (
+          <p className="text-xs text-emerald-400">{withdrawAction.success}</p>
         )}
         {boomMessage && (
           <p className="text-xs text-primary">{boomMessage}</p>

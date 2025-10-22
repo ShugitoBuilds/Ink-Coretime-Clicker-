@@ -34,6 +34,9 @@ export interface GameContextValue {
   isReady: boolean;
   blockHeight: number;
   rentals: CoreRental[];
+  balance: bigint;
+  rentCost: bigint;
+  tokenSymbol: string;
   energy: number;
   maxEnergy: number;
   nextEnergyAt: number | null;
@@ -45,10 +48,14 @@ export interface GameContextValue {
   connectWallet: () => Promise<void>;
   rentCore: () => Promise<void>;
   claimReward: () => Promise<void>;
+  deposit: (amount: bigint) => Promise<void>;
+  withdraw: (amount: bigint) => Promise<void>;
   refreshStatus: () => Promise<void>;
   actions: {
     connect: ActionState;
     rent: ActionState;
     claim: ActionState;
+    deposit: ActionState;
+    withdraw: ActionState;
   };
 }
