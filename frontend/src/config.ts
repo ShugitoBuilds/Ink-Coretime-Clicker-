@@ -29,3 +29,23 @@ const defaultMockSetting =
 
 export const USE_MOCK =
   (import.meta.env.VITE_USE_MOCK ?? defaultMockSetting) !== "false";
+
+export const ENERGY_MAX = Number(
+  import.meta.env.VITE_ENERGY_MAX ?? 10,
+);
+
+export const ENERGY_REGEN_INTERVAL_MS = Number(
+  import.meta.env.VITE_ENERGY_REGEN_INTERVAL_MS ?? 5000,
+);
+
+export const ENERGY_PER_RENT = Number(
+  import.meta.env.VITE_ENERGY_PER_RENT ?? 1,
+);
+
+export const RENTAL_DURATION_BLOCKS = Number(
+  import.meta.env.VITE_RENTAL_DURATION_BLOCKS ?? MATURITY_BLOCKS,
+);
+
+export const RENTAL_STORAGE_PREFIX =
+  import.meta.env.VITE_RENTAL_STORAGE_PREFIX ??
+  "coretime-clicker::rentals";

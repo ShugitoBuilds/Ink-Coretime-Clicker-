@@ -19,11 +19,24 @@ export interface ActionState {
   success: string | null;
 }
 
+export type CoreRentalStatus = "pending" | "active" | "matured";
+
+export interface CoreRental {
+  id: string;
+  status: CoreRentalStatus;
+  createdAt: number;
+  startBlock: number | null;
+  readyAtBlock: number | null;
+}
+
 export interface GameContextValue {
   player: PlayerStatus | null;
   isReady: boolean;
   blockHeight: number;
-  blockProgress: number;
+  rentals: CoreRental[];
+  energy: number;
+  maxEnergy: number;
+  nextEnergyAt: number | null;
   isBoomActive: boolean;
   boomMessage: string | null;
   accounts: WalletAccount[];

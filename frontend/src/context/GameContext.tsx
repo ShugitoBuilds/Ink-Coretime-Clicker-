@@ -14,15 +14,23 @@ import {
   ELASTIC_BOOM_CHANCE,
   ELASTIC_BOOM_CLAIMS,
   ELASTIC_BOOM_MULTIPLIER,
+  ENERGY_MAX,
+  ENERGY_PER_RENT,
+  ENERGY_REGEN_INTERVAL_MS,
+  RENTAL_DURATION_BLOCKS,
+  RENTAL_STORAGE_PREFIX,
   USE_MOCK,
 } from "../config";
 import {
   GameClient,
   boomDetails,
-  calculateProgress,
   calculateRewardPreview,
 } from "../lib/gameClient";
-import type { GameContextValue, PlayerStatus } from "../types/game";
+import type {
+  CoreRental,
+  GameContextValue,
+  PlayerStatus,
+} from "../types/game";
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
@@ -53,11 +61,42 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const [player, setPlayer] = useState<PlayerStatus | null>(null);
   const [blockHeight, setBlockHeight] = useState(0);
-  const [blockProgress, setBlockProgress] = useState(0);
   const [boomMessage, setBoomMessage] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [chainError, setChainError] = useState<string | null>(null);
   const [usingMock] = useState<boolean>(USE_MOCK);
+  const [rentals, setRentals] = useState<CoreRental[]>([]);
+  const [energy, setEnergy] = useState<number>(ENERGY_MAX);
+  const [nextEnergyAt, setNextEnergyAt] = useState<number | null>(null);
+  const energyTimerRef = useRef<number | null>(null);
+  const latestBlockRef = useRef<number>(0);
+
+  const spendEnergy = useCallback(() => {
+    setEnergy((prev) => {
+      const updated = Math.max(0, prev - ENERGY_PER_RENT);
+      if (updated < ENERGY_MAX) {
+        setNextEnergyAt(Date.now() + ENERGY_REGEN_INTERVAL_MS);
+      } else {
+        setNextEnergyAt(null);
+      }
+      return updated;
+    });
+  }, []);
+
+  const refundEnergy = useCallback(() => {
+    setEnergy((prev) => {
+      const updated = Math.min(ENERGY_MAX, prev + ENERGY_PER_RENT);
+      if (updated >= ENERGY_MAX) {
+        setNextEnergyAt(null);
+      }
+      return updated;
+    });
+  }, []);
+
+  const rentalStorageKey = useMemo(() => {
+    if (!selectedAccount) return null;
+    return `${RENTAL_STORAGE_PREFIX}:${selectedAccount.address}`;
+  }, [selectedAccount]);
 
   const gameClientRef = useRef<GameClient | null>(null);
   if (!gameClientRef.current) {
@@ -84,12 +123,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    if (!player) {
-      setBlockProgress(0);
-    }
-  }, [player]);
-
-  useEffect(() => {
     if (!player) return;
 
     if (player.activeMultiplier > 1 && !boomMessage) {
@@ -106,6 +139,94 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setConnectState((state) => ({ ...state, error: walletError ?? chainError }));
   }, [walletError, chainError]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!rentalStorageKey) {
+      setRentals([]);
+      setEnergy(ENERGY_MAX);
+      setNextEnergyAt(null);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(rentalStorageKey);
+      if (!raw) {
+        setRentals([]);
+        setEnergy(ENERGY_MAX);
+        setNextEnergyAt(null);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as CoreRental[];
+      setRentals(
+        parsed.map((rental) => ({
+          ...rental,
+          status: rental.status ?? "active",
+        })),
+      );
+    } catch (error) {
+      console.warn("Failed to parse rental queue", error);
+      setRentals([]);
+    }
+    setEnergy(ENERGY_MAX);
+    setNextEnergyAt(null);
+  }, [rentalStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!rentalStorageKey) return;
+    window.localStorage.setItem(
+      rentalStorageKey,
+      JSON.stringify(rentals),
+    );
+  }, [rentals, rentalStorageKey]);
+
+  useEffect(() => {
+    if (energy >= ENERGY_MAX) {
+      if (energyTimerRef.current !== null) {
+        window.clearInterval(energyTimerRef.current);
+        energyTimerRef.current = null;
+      }
+      setNextEnergyAt(null);
+      return;
+    }
+
+    if (energyTimerRef.current !== null) {
+      return;
+    }
+
+    setNextEnergyAt((prev) => prev ?? Date.now() + ENERGY_REGEN_INTERVAL_MS);
+
+    const timer = window.setInterval(() => {
+      setEnergy((prev) => {
+        const nextEnergy = Math.min(ENERGY_MAX, prev + ENERGY_PER_RENT);
+        if (nextEnergy >= ENERGY_MAX) {
+          if (energyTimerRef.current !== null) {
+            window.clearInterval(energyTimerRef.current);
+            energyTimerRef.current = null;
+          }
+          setNextEnergyAt(null);
+        } else {
+          setNextEnergyAt(Date.now() + ENERGY_REGEN_INTERVAL_MS);
+        }
+        return nextEnergy;
+      });
+    }, ENERGY_REGEN_INTERVAL_MS);
+
+    energyTimerRef.current = timer;
+
+    return () => {
+      if (energyTimerRef.current !== null) {
+        window.clearInterval(energyTimerRef.current);
+        energyTimerRef.current = null;
+      }
+    };
+  }, [energy]);
+
+  useEffect(() => {
+    latestBlockRef.current = blockHeight;
+  }, [blockHeight]);
 
   useEffect(() => {
     if (!selectedAccount) {
@@ -127,10 +248,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!current) return current;
 
       const elapsed = Math.max(blockHeight - current.lastClaimBlock, 0);
-      const progress =
-        current.coresRented === 0 ? 0 : calculateProgress(elapsed);
-      setBlockProgress(progress);
-
       const pendingReward = calculateRewardPreview(
         current.coresRented,
         elapsed,
@@ -150,6 +267,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         lastUpdatedAt: Date.now(),
       };
     });
+
+    setRentals((prev) =>
+      prev.map((rental) => {
+        if (
+          rental.status === "active" &&
+          rental.readyAtBlock !== null &&
+          blockHeight >= rental.readyAtBlock
+        ) {
+          return {
+            ...rental,
+            status: "matured",
+          };
+        }
+        return rental;
+      }),
+    );
   }, [blockHeight]);
 
   useEffect(() => {
@@ -230,6 +363,75 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             void pullStatusFromChain();
           }
 
+          const extractAddress = (value: unknown) => {
+            if (!value) return "";
+            if (typeof value === "string") return value;
+            if (
+              typeof value === "object" &&
+              value !== null &&
+              "toString" in value
+            ) {
+              try {
+                return (value as { toString: () => string }).toString();
+              } catch (error) {
+                console.warn("Failed to convert address", error, value);
+              }
+            }
+            return "";
+          };
+
+          if (event.name === "CoreRented") {
+            const accountAddress = extractAddress(event.args.player);
+            if (
+              selectedAccount &&
+              accountAddress === selectedAccount.address
+            ) {
+              const startBlock = Number(
+                event.args.block_number ??
+                  event.args.blockNumber ??
+                  event.args.block ??
+                  latestBlockRef.current,
+              );
+
+              setRentals((prev) => {
+                const next = [...prev];
+                const targetIndex = next.findIndex(
+                  (rental) => rental.status === "pending",
+                );
+
+                if (targetIndex !== -1) {
+                  next[targetIndex] = {
+                    ...next[targetIndex],
+                    status: "active",
+                    startBlock,
+                    readyAtBlock: startBlock + RENTAL_DURATION_BLOCKS,
+                  };
+                } else {
+                  next.push({
+                    id: `event-${startBlock}-${Date.now()}`,
+                    status: "active",
+                    createdAt: Date.now(),
+                    startBlock,
+                    readyAtBlock: startBlock + RENTAL_DURATION_BLOCKS,
+                  });
+                }
+                return next;
+              });
+            }
+          }
+
+          if (event.name === "RewardClaimed") {
+            const accountAddress = extractAddress(event.args.player);
+            if (
+              selectedAccount &&
+              accountAddress === selectedAccount.address
+            ) {
+              setRentals((prev) =>
+                prev.filter((rental) => rental.status !== "matured"),
+              );
+            }
+          }
+
           if (
             event.name === "RewardClaimed" ||
             event.name === "CoreRented"
@@ -301,10 +503,52 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    if (energy < ENERGY_PER_RENT) {
+      setRentState({
+        isLoading: false,
+        error: "Not enough energy. Wait for recharge.",
+        success: null,
+      });
+      return;
+    }
+
+    const rentalId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `core-${Date.now()}-${Math.random()}`;
+    const createdAt = Date.now();
+
     setRentState({ isLoading: true, error: null, success: null });
+    setRentals((prev) => [
+      ...prev,
+      {
+        id: rentalId,
+        status: "pending",
+        createdAt,
+        startBlock: null,
+        readyAtBlock: null,
+      },
+    ]);
+    spendEnergy();
+
+    const activateRental = (start: number) => {
+      setRentals((prev) =>
+        prev.map((rental) =>
+          rental.id === rentalId
+            ? {
+                ...rental,
+                status: "active",
+                startBlock: start,
+                readyAtBlock: start + RENTAL_DURATION_BLOCKS,
+              }
+            : rental,
+        ),
+      );
+    };
 
     try {
       if (usingMock) {
+        activateRental(blockHeight);
         setPlayer((prev) => {
           const basePlayer =
             prev && prev.address === selectedAccount.address
@@ -323,7 +567,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         if (!extension) {
           throw new Error("Wallet signer not available.");
         }
+
         await gameClient.rentCore(selectedAccount, extension);
+        const latestBlock = await gameClient.getBlockNumber();
+        activateRental(latestBlock);
         await pullStatusFromChain();
       }
 
@@ -333,6 +580,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         success: "Core rented",
       });
     } catch (err) {
+      refundEnergy();
+      setRentals((prev) => prev.filter((rental) => rental.id !== rentalId));
       setRentState({
         isLoading: false,
         error: err instanceof Error ? err.message : "Failed to rent core",
@@ -341,11 +590,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [
     selectedAccount,
+    energy,
+    spendEnergy,
     usingMock,
     blockHeight,
     extension,
     gameClient,
     pullStatusFromChain,
+    refundEnergy,
   ]);
 
   const claimReward = useCallback(async () => {
@@ -402,6 +654,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           };
         });
 
+        setRentals((prev) =>
+          prev.filter((rental) => rental.status !== "matured"),
+        );
+
         setClaimState({
           isLoading: false,
           error: null,
@@ -417,6 +673,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           extension,
         );
         await pullStatusFromChain();
+        setRentals((prev) =>
+          prev.filter((rental) => rental.status !== "matured"),
+        );
 
         setClaimState({
           isLoading: false,
@@ -465,7 +724,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       player,
       isReady,
       blockHeight,
-      blockProgress,
+      rentals,
+      energy,
+      maxEnergy: ENERGY_MAX,
+      nextEnergyAt,
       isBoomActive: Boolean(player && player.activeMultiplier > 1),
       boomMessage,
       accounts,
@@ -485,7 +747,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       player,
       isReady,
       blockHeight,
-      blockProgress,
+      rentals,
+      energy,
+      nextEnergyAt,
       boomMessage,
       accounts,
       selectedAccount,

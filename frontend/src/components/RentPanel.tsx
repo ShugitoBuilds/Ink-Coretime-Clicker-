@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import { useGame } from "../context/GameContext";
+import type { CoreRental } from "../types/game";
 
 const formatBalance = (value: bigint) => {
   if (value === 0n) return "0";
@@ -10,7 +11,11 @@ const formatBalance = (value: bigint) => {
 const RentPanel = () => {
   const {
     player,
-    blockProgress,
+    blockHeight,
+    rentals,
+    energy,
+    maxEnergy,
+    nextEnergyAt,
     rentCore,
     claimReward,
     actions: { rent, claim },
@@ -19,7 +24,6 @@ const RentPanel = () => {
     refreshStatus,
   } = useGame();
 
-  const progressPercentage = Math.round(blockProgress * 100);
   const pendingReward = player ? formatBalance(player.pendingReward) : "0";
   const totalRewards = player ? formatBalance(player.totalRewards) : "0";
 
@@ -27,6 +31,38 @@ const RentPanel = () => {
     if (!player) return true;
     return player.pendingReward === 0n || claim.isLoading;
   }, [player, claim.isLoading]);
+
+  const rentalGroups = useMemo(() => {
+    const grouped: Record<CoreRental["status"], CoreRental[]> = {
+      pending: [],
+      active: [],
+      matured: [],
+    };
+    rentals.forEach((rental) => {
+      grouped[rental.status].push(rental);
+    });
+    return grouped;
+  }, [rentals]);
+
+  const progressFor = (rental: CoreRental) => {
+    if (
+      rental.status !== "active" ||
+      rental.startBlock === null ||
+      rental.readyAtBlock === null
+    ) {
+      return 0;
+    }
+    const total = Math.max(1, rental.readyAtBlock - rental.startBlock);
+    const completed = Math.max(0, blockHeight - rental.startBlock);
+    return Math.min(1, completed / total);
+  };
+
+  const nextEnergySeconds = useMemo(() => {
+    if (!nextEnergyAt) return null;
+    const diff = nextEnergyAt - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / 1000);
+  }, [nextEnergyAt]);
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg shadow-primary/25">
@@ -42,25 +78,102 @@ const RentPanel = () => {
       </div>
 
       <div className="relative mt-6 grid gap-4">
-        <button
-          onClick={rentCore}
-          disabled={rent.isLoading}
-          className="w-full rounded-lg bg-primary px-6 py-4 text-lg font-semibold text-bg-dark transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {rent.isLoading ? "Renting…" : "Rent Core 🚀"}
-        </button>
-
-        <div className="flex flex-col gap-2">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-center justify-between text-sm text-gray-300">
-            <span>Rental progress</span>
-            <span>{progressPercentage}%</span>
+            <span>Energy</span>
+            <span className="font-mono">
+              {energy}/{maxEnergy}
+            </span>
           </div>
-          <div className="h-3 w-full rounded-full bg-white/10">
+          <div className="mt-3 h-2 w-full rounded-full bg-white/10">
             <div
               className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${progressPercentage}%` }}
+              style={{
+                width: `${Math.min(100, Math.round((energy / maxEnergy) * 100))}%`,
+              }}
             />
           </div>
+          <p className="mt-2 text-xs text-gray-400">
+            Costs 1 energy per rental.{" "}
+            {energy >= maxEnergy
+              ? "Energy full."
+              : nextEnergySeconds !== null
+              ? `Next +1 in ${nextEnergySeconds}s`
+              : "Recharging…"}
+          </p>
+        </div>
+
+        <button
+          onClick={rentCore}
+          disabled={rent.isLoading || energy <= 0}
+          className="w-full rounded-lg bg-primary px-6 py-4 text-lg font-semibold text-bg-dark transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {rent.isLoading
+            ? "Renting…"
+            : energy <= 0
+            ? "Charging…"
+            : "Rent Core 🚀"}
+        </button>
+
+        <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <h3 className="text-sm font-semibold text-gray-200">Core queue</h3>
+          {rentals.length === 0 ? (
+            <p className="mt-2 text-xs text-gray-400">
+              Click <strong>Rent Core</strong> to lease your first slot.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {rentals.map((rental) => {
+                const progress = progressFor(rental);
+                return (
+                  <div
+                    key={rental.id}
+                    className="rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-gray-300"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold uppercase tracking-wide text-gray-400">
+                        {rental.status === "pending"
+                          ? "Pending"
+                          : rental.status === "active"
+                          ? "Active"
+                          : "Matured"}
+                      </span>
+                      <span className="font-mono text-gray-400">
+                        {rental.startBlock !== null
+                          ? `#${rental.startBlock}`
+                          : "—"}
+                      </span>
+                    </div>
+                    {rental.status === "active" && (
+                      <div className="mt-2">
+                        <div className="h-2 w-full rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${Math.round(progress * 100)}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[10px] text-gray-500">
+                          {rental.readyAtBlock !== null
+                            ? `Ready at block #${rental.readyAtBlock}`
+                            : "Calculating..."}
+                        </p>
+                      </div>
+                    )}
+                    {rental.status === "pending" && (
+                      <p className="mt-2 text-[10px] text-gray-500">
+                        Waiting for transaction confirmation…
+                      </p>
+                    )}
+                    {rental.status === "matured" && (
+                      <p className="mt-2 text-[10px] text-primary">
+                        Core ready! Claim rewards to harvest.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <button
