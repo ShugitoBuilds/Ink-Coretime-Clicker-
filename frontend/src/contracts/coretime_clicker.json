@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x7e7c73783af74ae09da5c7593d309be093c03da5b9e69ff20edb1b2482eb3b3a",
+    "hash": "0xd3b3298dcb75b9f6e59401021a729b8451275f8dc95d3999fe566d9673762523",
     "language": "ink! 4.3.0",
     "compiler": "rustc 1.90.0",
     "build_info": {
@@ -320,6 +320,32 @@
           "type": 7
         },
         "selector": "0xedb2052f"
+      },
+      {
+        "args": [
+          {
+            "label": "count",
+            "type": {
+              "displayName": [
+                "u32"
+              ],
+              "type": 0
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "rent_many",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 7
+        },
+        "selector": "0xb00bf632"
       },
       {
         "args": [],

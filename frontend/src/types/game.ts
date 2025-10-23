@@ -40,6 +40,16 @@ export interface GameContextValue {
   energy: number;
   maxEnergy: number;
   nextEnergyAt: number | null;
+  queuedRentals: number;
+  maxBatchSize: number;
+  maxQueueSize: number;
+  isBatchInFlight: boolean;
+  autoRent: {
+    isActive: boolean;
+    remaining: number;
+  };
+  startAutoRent: (count: number) => void;
+  stopAutoRent: () => void;
   isBoomActive: boolean;
   boomMessage: string | null;
   accounts: WalletAccount[];

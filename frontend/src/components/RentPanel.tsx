@@ -20,6 +20,13 @@ const RentPanel = () => {
     balance,
     rentCost,
     tokenSymbol,
+    queuedRentals,
+    maxBatchSize,
+    maxQueueSize,
+    isBatchInFlight,
+    autoRent,
+    startAutoRent,
+    stopAutoRent,
     rentCore,
     claimReward,
     deposit,
@@ -33,17 +40,52 @@ const RentPanel = () => {
   const pendingReward = player ? formatBalance(player.pendingReward) : "0";
   const totalRewards = player ? formatBalance(player.totalRewards) : "0";
 
+  const reservedBalance = useMemo(
+    () => rentCost * BigInt(queuedRentals),
+    [rentCost, queuedRentals],
+  );
+
+  const effectiveBalance = useMemo(
+    () =>
+      balance >= reservedBalance ? balance - reservedBalance : 0n,
+    [balance, reservedBalance],
+  );
+
+  const canAffordNext = effectiveBalance >= rentCost;
+  const queueCapacityLeft = maxQueueSize - queuedRentals;
+  const isRentingNow = rent.isLoading || queuedRentals > 0 || isBatchInFlight;
+
   const claimDisabled = useMemo(() => {
     if (!player) return true;
     return player.pendingReward === 0n || claim.isLoading;
   }, [player, claim.isLoading]);
 
   const rentDisabled = useMemo(() => {
-    if (rent.isLoading) return true;
     if (energy <= 0) return true;
-    if (balance < rentCost) return true;
+    if (!canAffordNext) return true;
+    if (queueCapacityLeft <= 0) return true;
     return false;
-  }, [rent.isLoading, energy, balance, rentCost]);
+  }, [energy, canAffordNext, queueCapacityLeft]);
+
+  const rentButtonLabel = useMemo(() => {
+    if (isRentingNow) {
+      return queuedRentals > 0
+        ? `Queued (${queuedRentals})`
+        : "Submitting…";
+    }
+    if (energy <= 0) return "Charging…";
+    if (!canAffordNext) return "Add balance";
+    if (queueCapacityLeft <= 0) return "Queue full";
+    return "Rent Core 🚀";
+  }, [
+    isRentingNow,
+    queuedRentals,
+    energy,
+    canAffordNext,
+    queueCapacityLeft,
+  ]);
+
+  const autoOptions = [5, 10, 20];
 
   const rentalGroups = useMemo(() => {
     const grouped: Record<CoreRental["status"], CoreRental[]> = {
@@ -124,6 +166,16 @@ const RentPanel = () => {
             <span>Prepaid balance</span>
             <span className="font-mono">{formatTokens(balance)}</span>
           </div>
+          <div className="mt-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
+            <span>Reserved (queue)</span>
+            <span className="font-mono">
+              {queuedRentals > 0 ? formatTokens(reservedBalance) : "0"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
+            <span>Available</span>
+            <span className="font-mono">{formatTokens(effectiveBalance)}</span>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -177,17 +229,23 @@ const RentPanel = () => {
           disabled={rentDisabled}
           className="w-full rounded-lg bg-primary px-6 py-4 text-lg font-semibold text-bg-dark transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {rent.isLoading
-            ? "Renting…"
-            : energy <= 0
-            ? "Charging…"
-            : balance < rentCost
-            ? "Add balance"
-            : "Rent Core 🚀"}
+          {rentButtonLabel}
         </button>
+        {isRentingNow && (
+          <p className="text-center text-xs text-gray-400">
+            {isBatchInFlight
+              ? "Submitting batch to chain…"
+              : "Waiting to batch queued rentals…"}
+          </p>
+        )}
 
         <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-          <h3 className="text-sm font-semibold text-gray-200">Core queue</h3>
+          <div className="flex items-center justify-between text-sm font-semibold text-gray-200">
+            <h3>Core queue</h3>
+            <span className="text-[10px] font-normal uppercase tracking-wide text-gray-500">
+              {queuedRentals}/{maxQueueSize} queued · batch {maxBatchSize}
+            </span>
+          </div>
           {rentals.length === 0 ? (
             <p className="mt-2 text-xs text-gray-400">
               Click <strong>Rent Core</strong> to lease your first slot.
@@ -245,6 +303,42 @@ const RentPanel = () => {
               })}
             </div>
           )}
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-center justify-between text-sm text-gray-300">
+            <span>Automation</span>
+            <span className="text-xs font-mono text-gray-500">
+              {autoRent.isActive
+                ? `Remaining ${autoRent.remaining}`
+                : "Inactive"}
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {autoOptions.map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => startAutoRent(count)}
+                disabled={!canAffordNext}
+                className="rounded-full border border-primary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary transition hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Auto rent {count}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={stopAutoRent}
+              disabled={!autoRent.isActive}
+              className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-300 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Stop auto
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            Auto mode queues rentals on a short timer until balance or energy
+            runs out.
+          </p>
         </div>
 
         <button

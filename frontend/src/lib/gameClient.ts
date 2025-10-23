@@ -13,6 +13,7 @@ import {
 import type { PlayerStatus } from "../types/game";
 import type { WalletAccount } from "../types/wallet";
 import { disconnectApi, getApi, getContract, withSigner } from "./polkadot";
+import { safeToBigInt } from "./safeBigInt";
 
 export interface ChainPlayerStatus extends PlayerStatus {
   totalCoresRented: number;
@@ -157,27 +158,56 @@ export class GameClient {
     account: WalletAccount,
     extension: InjectedExtension,
   ): Promise<void> {
+    await this.rentMany(account, extension, 1);
+  }
+
+  async rentMany(
+    account: WalletAccount,
+    extension: InjectedExtension,
+    count: number,
+  ): Promise<void> {
+    if (count <= 0) {
+      return;
+    }
+
     const api = await this.ensureApi();
     const contract = await getContract();
     const { signer } = await withSigner(extension, account.address);
 
+    const baseRefTime = new BN(20000000000);
+    const baseProof = new BN(4000000);
     const gasLimit = api.registry.createType("WeightV2", {
-      refTime: new BN(20000000000),
-      proofSize: new BN(4000000),
+      refTime: baseRefTime.muln(Math.max(1, count)),
+      proofSize: baseProof.muln(Math.max(1, count)),
     });
 
+    const rentManyTx =
+      contract.tx["rent_many"] ?? contract.tx["rentMany"] ?? null;
     const rentCoreTx = contract.tx["rent_core"] ?? contract.tx["rentCore"];
 
-    const tx = rentCoreTx?.(
-      {
-        gasLimit,
-        storageDepositLimit: null,
-        value: 0,
-      },
-    );
+    if (!rentManyTx && !rentCoreTx) {
+      throw new Error(
+        "Neither rent_many nor rent_core messages are available in metadata.",
+      );
+    }
 
-    if (!tx) {
-      throw new Error("rent_core message not available in metadata.");
+    const options = {
+      gasLimit,
+      storageDepositLimit: null,
+      value: 0,
+    } as const;
+
+    let tx;
+
+    if (rentManyTx) {
+      tx = rentManyTx(options, count);
+    } else if (count === 1 && rentCoreTx) {
+      tx = rentCoreTx(options);
+    } else if (rentCoreTx) {
+      const calls = Array.from({ length: count }, () => rentCoreTx(options));
+      tx = api.tx.utility.batchAll(calls);
+    } else {
+      throw new Error("Unable to construct rent transaction.");
     }
 
     await tx.signAndSend(
@@ -334,7 +364,26 @@ export class GameClient {
       throw new Error(result.result.asErr.toString());
     }
 
-    return BigInt(result.output?.toString?.() ?? 0);
+    if (!result.output) {
+      return 0n;
+    }
+
+    try {
+      return safeToBigInt(result.output);
+    } catch (error) {
+      const jsonOutput =
+        typeof result.output.toJSON === "function"
+          ? result.output.toJSON()
+          : undefined;
+      console.error(
+        "Failed to decode balance_of result",
+        error,
+        jsonOutput ?? result.output,
+      );
+      throw error instanceof Error
+        ? error
+        : new Error("Unable to decode balance result.");
+    }
   }
 
   async deposit(

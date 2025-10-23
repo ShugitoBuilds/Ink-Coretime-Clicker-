@@ -125,41 +125,33 @@ mod coretime_clicker {
 
         #[ink(message)]
         pub fn rent_core(&mut self) -> Result<()> {
+            self.rent_many(1)
+        }
+
+        #[ink(message)]
+        pub fn rent_many(&mut self, count: u32) -> Result<()> {
+            if count == 0 {
+                return Ok(());
+            }
+
             let caller = self.env().caller();
             let block_number = self.env().block_number();
             let mut player = self.player_stats.get(&caller).unwrap_or_default();
-
             let mut balance = self.prepaid_balances.get(&caller).unwrap_or(0);
-            if balance < RENT_COST {
+
+            let total_cost = RENT_COST
+                .checked_mul(count as u128)
+                .ok_or(ContractError::InsufficientBalance)?;
+            if balance < total_cost {
                 return Err(ContractError::InsufficientBalance);
             }
-            balance = balance
-                .checked_sub(RENT_COST)
-                .ok_or(ContractError::InsufficientBalance)?;
-            self.prepaid_balances.insert(&caller, &balance);
 
-            player.cores_rented = player
-                .cores_rented
-                .checked_add(1)
-                .ok_or(ContractError::CoreOverflow)?;
-
-            if player.last_claim_block == 0 {
-                player.last_claim_block = block_number;
+            for _ in 0..count {
+                self.process_rent(&caller, &mut player, &mut balance, block_number)?;
             }
 
-            self.total_cores_rented = self
-                .total_cores_rented
-                .checked_add(1)
-                .ok_or(ContractError::CoreOverflow)?;
-
+            self.prepaid_balances.insert(&caller, &balance);
             self.player_stats.insert(&caller, &player);
-
-            self.env().emit_event(CoreRented {
-                player: caller,
-                cores_rented: player.cores_rented,
-                block_number,
-                balance_remaining: balance,
-            });
 
             Ok(())
         }
@@ -316,6 +308,41 @@ mod coretime_clicker {
             self.prepaid_balances.get(&account).unwrap_or(0)
         }
 
+        fn process_rent(
+            &mut self,
+            caller: &AccountId,
+            player: &mut Player,
+            balance: &mut Balance,
+            block_number: u32,
+        ) -> Result<()> {
+            *balance = balance
+                .checked_sub(RENT_COST)
+                .ok_or(ContractError::InsufficientBalance)?;
+
+            player.cores_rented = player
+                .cores_rented
+                .checked_add(1)
+                .ok_or(ContractError::CoreOverflow)?;
+
+            if player.last_claim_block == 0 {
+                player.last_claim_block = block_number;
+            }
+
+            self.total_cores_rented = self
+                .total_cores_rented
+                .checked_add(1)
+                .ok_or(ContractError::CoreOverflow)?;
+
+            self.env().emit_event(CoreRented {
+                player: *caller,
+                cores_rented: player.cores_rented,
+                block_number,
+                balance_remaining: *balance,
+            });
+
+            Ok(())
+        }
+
         fn calculate_reward(cores: u32, elapsed_blocks: u32) -> Balance {
             (cores as u128)
                 .saturating_mul(elapsed_blocks as u128)
@@ -446,6 +473,34 @@ mod coretime_clicker {
             let mut contract = CoretimeClicker::new();
             let err = contract.rent_core().expect_err("should require prepaid balance");
             assert_eq!(err, ContractError::InsufficientBalance);
+        }
+
+        #[ink::test]
+        fn rent_many_charges_balance_and_updates_state() {
+            let mut contract = CoretimeClicker::new();
+            deposit_for(&mut contract, RENT_COST * 5);
+
+            contract.rent_many(3).expect("rent_many should succeed");
+
+            let caller = default_accounts().alice;
+            let status = contract.check_status(caller);
+            assert_eq!(status.cores_rented, 3);
+            assert_eq!(contract.balance_of(caller), RENT_COST * 2);
+        }
+
+        #[ink::test]
+        fn rent_many_checks_balance_before_renting() {
+            let mut contract = CoretimeClicker::new();
+            deposit_for(&mut contract, RENT_COST);
+
+            let err = contract
+                .rent_many(2)
+                .expect_err("should fail when balance insufficient");
+            assert_eq!(err, ContractError::InsufficientBalance);
+
+            let caller = default_accounts().alice;
+            assert_eq!(contract.check_status(caller).cores_rented, 0);
+            assert_eq!(contract.balance_of(caller), RENT_COST);
         }
 
         #[ink::test]
