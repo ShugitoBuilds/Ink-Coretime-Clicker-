@@ -19,11 +19,37 @@ export interface ActionState {
   success: string | null;
 }
 
+export type CoreRentalStatus = "pending" | "active" | "matured";
+
+export interface CoreRental {
+  id: string;
+  status: CoreRentalStatus;
+  createdAt: number;
+  startBlock: number | null;
+  readyAtBlock: number | null;
+}
+
 export interface GameContextValue {
   player: PlayerStatus | null;
   isReady: boolean;
   blockHeight: number;
-  blockProgress: number;
+  rentals: CoreRental[];
+  balance: bigint;
+  rentCost: bigint;
+  tokenSymbol: string;
+  energy: number;
+  maxEnergy: number;
+  nextEnergyAt: number | null;
+  queuedRentals: number;
+  maxBatchSize: number;
+  maxQueueSize: number;
+  isBatchInFlight: boolean;
+  autoRent: {
+    isActive: boolean;
+    remaining: number;
+  };
+  startAutoRent: (count: number) => void;
+  stopAutoRent: () => void;
   isBoomActive: boolean;
   boomMessage: string | null;
   accounts: WalletAccount[];
@@ -32,10 +58,14 @@ export interface GameContextValue {
   connectWallet: () => Promise<void>;
   rentCore: () => Promise<void>;
   claimReward: () => Promise<void>;
+  deposit: (amount: bigint) => Promise<void>;
+  withdraw: (amount: bigint) => Promise<void>;
   refreshStatus: () => Promise<void>;
   actions: {
     connect: ActionState;
     rent: ActionState;
     claim: ActionState;
+    deposit: ActionState;
+    withdraw: ActionState;
   };
 }

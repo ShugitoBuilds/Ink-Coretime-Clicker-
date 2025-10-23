@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 
 import { useGame } from "../context/GameContext";
+import { formatTokens } from "../lib/units";
 import { formatAddress } from "../hooks/useLeaderboard";
 
 const StatusPanel = () => {
-  const { player, blockHeight, isReady, selectedAccount } = useGame();
+  const { player, blockHeight, isReady, selectedAccount, balance } = useGame();
 
   const statusItems = useMemo(
     () => [
@@ -23,6 +24,10 @@ const StatusPanel = () => {
       {
         label: "Total rewards",
         value: player ? player.totalRewards.toString() : 0,
+      },
+      {
+        label: "Prepaid balance",
+        value: formatTokens(balance),
       },
       {
         label: "Last claim block",
