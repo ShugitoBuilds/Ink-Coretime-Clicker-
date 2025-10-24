@@ -1,0 +1,8 @@
+wss.juanerombado.info {
+    reverse_proxy http://127.0.0.1:9933 {
+        transport http {
+            versions h1.1
+        }
+        header_up Host {http.request.host}
+    }
+}
