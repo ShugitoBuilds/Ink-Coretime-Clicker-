@@ -1,0 +1,17 @@
+[Unit]
+Description=Coretime Substrate Contracts Node
+After=network.target
+Wants=network-online.target
+
+[Service]
+User=coretime
+ExecStart=/usr/local/bin/substrate-contracts-node \
+    --dev \
+    --rpc-cors all \
+    --unsafe-rpc-external \
+    --rpc-port 9933
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
