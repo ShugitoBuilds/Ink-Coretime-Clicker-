@@ -1,0 +1,8 @@
+C:\Users\juan\Downloads\Cursor projects D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\prize_pool\target\debug\deps\impl_trait_for_tuples-dcdcf094a183e7cf.dll: C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\lib.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\full_automatic.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\semi_automatic.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\utils.rs
+
+C:\Users\juan\Downloads\Cursor projects D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\prize_pool\target\debug\deps\impl_trait_for_tuples-dcdcf094a183e7cf.d: C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\lib.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\full_automatic.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\semi_automatic.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\utils.rs
+
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\lib.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\full_automatic.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\semi_automatic.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\impl-trait-for-tuples-0.2.3\src\utils.rs:

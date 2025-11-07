@@ -1,0 +1,3 @@
+Placeholder click button idle state (512x512)
+This file should be replaced with actual click-idle-512x512.png
+

@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-contracts:
+    name: Build Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rust-src
+          target: wasm32-unknown-unknown
+      
+      - name: Install cargo-contract
+        run: |
+          cargo install --force --locked cargo-contract --version 3.2.0
+      
+      - name: Build PrizePool contract
+        run: |
+          cd contracts/prize_pool
+          cargo contract build --release
+      
+      - name: Build RNG contract
+        run: |
+          cd contracts/rng
+          cargo contract build --release
+      
+      - name: Check artifacts
+        run: |
+          test -f contracts/prize_pool/target/ink/prize_pool.contract || exit 1
+          test -f contracts/rng/target/ink/rng.contract || exit 1
+  
+  test-contracts:
+    name: Test Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rust-src
+      
+      - name: Test PrizePool contract
+        run: |
+          cd contracts/prize_pool
+          cargo test
+      
+      - name: Test RNG contract
+        run: |
+          cd contracts/rng
+          cargo test
+  
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Check build output
+        run: |
+          test -d frontend/dist || exit 1
+
