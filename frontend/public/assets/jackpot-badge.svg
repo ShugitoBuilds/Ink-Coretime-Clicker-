@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="45" fill="#E6007A" opacity="0.2"/>
+  <circle cx="50" cy="50" r="35" fill="#E6007A" opacity="0.4"/>
+  <circle cx="50" cy="50" r="25" fill="#E6007A"/>
+  <text x="50" y="60" font-family="Arial" font-size="30" font-weight="bold" fill="white" text-anchor="middle">J</text>
+</svg>
+

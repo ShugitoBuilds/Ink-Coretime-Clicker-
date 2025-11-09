@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
-import { useGame } from "../context/GameContext";
+import { useWallet } from "../context/WalletContext";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 const shorten = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(address.length - 4)}`;
@@ -10,9 +11,10 @@ const TopBar = () => {
     accounts,
     selectedAccount,
     selectAccount,
-    connectWallet,
-    actions: { connect },
-  } = useGame();
+    connect,
+    isConnecting,
+    error,
+  } = useWallet();
 
   const accountOptions = useMemo(
     () =>
@@ -28,10 +30,9 @@ const TopBar = () => {
   return (
     <header className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-black/40 px-6 py-5 shadow-lg shadow-primary/10 backdrop-blur md:flex-row md:items-center md:justify-between">
       <div>
-        <h1 className="text-3xl font-semibold text-primary">Coretime Clicker</h1>
+        <h1 className="text-3xl font-semibold text-primary">CoreTime Clicker</h1>
         <p className="text-sm text-gray-300">
-          Rent cores, wait for blocks, and collect rewards as you learn Polkadot
-          elastic scaling concepts.
+          Simple clicker game with a paid-entry jackpot system on Astar Network.
         </p>
       </div>
 
@@ -59,16 +60,17 @@ const TopBar = () => {
           </div>
         ) : (
           <button
-            onClick={connectWallet}
-            disabled={connect.isLoading}
-            className="rounded-full border border-primary px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={connect}
+            disabled={isConnecting}
+            className="flex items-center gap-2 rounded-full border border-primary px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {connect.isLoading ? "Connecting…" : "Connect Wallet"}
+            {isConnecting && <LoadingSpinner size="sm" />}
+            {isConnecting ? "Connecting…" : "Connect Wallet"}
           </button>
         )}
 
-        {connect.error && (
-          <span className="max-w-xs text-xs text-red-400">{connect.error}</span>
+        {error && (
+          <span className="max-w-xs text-xs text-red-400">{error}</span>
         )}
       </div>
     </header>

@@ -1,0 +1,7 @@
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/ink/release/deps/proc_macro_crate-c6f3b7c847d4a867.d: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro-crate-1.3.1/src/lib.rs
+
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/ink/release/deps/libproc_macro_crate-c6f3b7c847d4a867.rlib: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro-crate-1.3.1/src/lib.rs
+
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/ink/release/deps/libproc_macro_crate-c6f3b7c847d4a867.rmeta: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro-crate-1.3.1/src/lib.rs
+
+/home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro-crate-1.3.1/src/lib.rs:

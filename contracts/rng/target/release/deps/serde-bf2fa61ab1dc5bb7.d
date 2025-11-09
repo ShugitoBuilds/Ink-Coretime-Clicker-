@@ -1,0 +1,12 @@
+C:\Users\juan\Downloads\Cursor projects D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\rng\target\release\deps\libserde-bf2fa61ab1dc5bb7.rmeta: C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\juan\Downloads\Cursor\ projects\ D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\rng\target\release\build\serde-514f017c05323828\out/private.rs
+
+C:\Users\juan\Downloads\Cursor projects D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\rng\target\release\deps\serde-bf2fa61ab1dc5bb7.d: C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\juan\Downloads\Cursor\ projects\ D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\rng\target\release\build\serde-514f017c05323828\out/private.rs
+
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\juan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\Users\juan\Downloads\Cursor\ projects\ D\CoretimeClicker\Ink-Coretime-Clicker-\contracts\rng\target\release\build\serde-514f017c05323828\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\juan\\Downloads\\Cursor projects D\\CoretimeClicker\\Ink-Coretime-Clicker-\\contracts\\rng\\target\\release\\build\\serde-514f017c05323828\\out

@@ -1,0 +1,10 @@
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/debug/deps/secp256k1_sys-de36599aa8dae90b.d: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/lib.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/macros.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/types.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/recovery.rs
+
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/debug/deps/libsecp256k1_sys-de36599aa8dae90b.rlib: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/lib.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/macros.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/types.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/recovery.rs
+
+/mnt/c/Users/juan/Downloads/Cursor projects D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/debug/deps/libsecp256k1_sys-de36599aa8dae90b.rmeta: /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/lib.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/macros.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/types.rs /home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/recovery.rs
+
+/home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/lib.rs:
+/home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/macros.rs:
+/home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/types.rs:
+/home/juan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/secp256k1-sys-0.8.2/src/recovery.rs:

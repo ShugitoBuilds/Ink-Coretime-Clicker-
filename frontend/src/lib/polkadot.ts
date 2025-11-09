@@ -2,11 +2,13 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ContractPromise } from "@polkadot/api-contract";
 import type { InjectedExtension } from "@polkadot/extension-inject/types";
 
-import metadata from "../contracts/coretime_clicker.json";
-import { CONTRACT_ADDRESS, RPC_ENDPOINT } from "../config";
+import prizePoolMetadata from "../contracts/prize_pool.json";
+import rngMetadata from "../contracts/rng.json";
+import { PRIZE_POOL_ADDRESS, RNG_ADDRESS, RPC_ENDPOINT } from "../config";
 
 let apiInstance: ApiPromise | null = null;
-let contractInstance: ContractPromise | null = null;
+let prizePoolInstance: ContractPromise | null = null;
+let rngInstance: ContractPromise | null = null;
 
 export const getApi = async (): Promise<ApiPromise> => {
   if (apiInstance) {
@@ -18,18 +20,32 @@ export const getApi = async (): Promise<ApiPromise> => {
   return apiInstance;
 };
 
-export const getContract = async (): Promise<ContractPromise> => {
-  if (contractInstance) {
-    return contractInstance;
+export const getPrizePoolContract = async (): Promise<ContractPromise> => {
+  if (prizePoolInstance) {
+    return prizePoolInstance;
   }
 
-  if (!CONTRACT_ADDRESS) {
-    throw new Error("Contract address (VITE_CONTRACT_ADDRESS) is not set.");
+  if (!PRIZE_POOL_ADDRESS) {
+    throw new Error("PrizePool contract address (VITE_PRIZE_POOL_ADDRESS) is not set.");
   }
 
   const api = await getApi();
-  contractInstance = new ContractPromise(api, metadata as any, CONTRACT_ADDRESS);
-  return contractInstance;
+  prizePoolInstance = new ContractPromise(api, prizePoolMetadata as any, PRIZE_POOL_ADDRESS);
+  return prizePoolInstance;
+};
+
+export const getRNGContract = async (): Promise<ContractPromise> => {
+  if (rngInstance) {
+    return rngInstance;
+  }
+
+  if (!RNG_ADDRESS) {
+    throw new Error("RNG contract address (VITE_RNG_ADDRESS) is not set.");
+  }
+
+  const api = await getApi();
+  rngInstance = new ContractPromise(api, rngMetadata as any, RNG_ADDRESS);
+  return rngInstance;
 };
 
 export const withSigner = async (
@@ -51,6 +67,7 @@ export const disconnectApi = async () => {
   if (apiInstance) {
     await apiInstance.disconnect();
     apiInstance = null;
-    contractInstance = null;
+    prizePoolInstance = null;
+    rngInstance = null;
   }
 };

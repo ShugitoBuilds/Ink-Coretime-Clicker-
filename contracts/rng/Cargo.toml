@@ -1,0 +1,33 @@
+[package]
+name = "rng"
+version = "0.1.0"
+edition = "2021"
+authors = ["Coretime Clicker Contributors"]
+
+[dependencies]
+ink = { version = "4.2.0", default-features = false }
+scale = { package = "parity-scale-codec", version = "3.6", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+ink = { version = "4.2.0", features = ["std"] }
+drink = "0.8"
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+]
+ink-as-dependency = []
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[lib]
+path = "src/lib.rs"
+

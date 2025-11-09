@@ -1,0 +1,1 @@
+/mnt/c/Users/juan/Downloads/Cursor\ projects\ D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/target/ink/wasm32-unknown-unknown/release/prize_pool.wasm: /mnt/c/Users/juan/Downloads/Cursor\ projects\ D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/prize_pool/src/lib.rs
