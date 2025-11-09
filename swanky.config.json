@@ -1,0 +1,31 @@
+{
+  "contractsDir": "contracts",
+  "artifactsDir": "artifacts",
+  "contracts": {
+    "rng": {
+      "name": "rng",
+      "path": "contracts/rng",
+      "artifactName": "rng",
+      "buildMode": "release"
+    },
+    "prize_pool": {
+      "name": "prize_pool",
+      "path": "contracts/prize_pool",
+      "artifactName": "prize_pool",
+      "buildMode": "release"
+    }
+  },
+  "accounts": [
+    {
+      "alias": "deployer",
+      "mnemonic": "audit segment job dentist coil tissue broken oil habit scan fire nerve"
+    }
+  ],
+  "networks": {
+    "astar": {
+      "endpoint": "wss://rpc.astar.network",
+      "accounts": ["deployer"]
+    }
+  }
+}
+

@@ -1,0 +1,1 @@
+/mnt/c/Users/juan/Downloads/Cursor\ projects\ D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/rng/target/ink/release/metadata-gen: /mnt/c/Users/juan/Downloads/Cursor\ projects\ D/CoretimeClicker/Ink-Coretime-Clicker-/contracts/rng/src/lib.rs /tmp/cargo-contract_IEilIh/.ink/metadata_gen/main.rs

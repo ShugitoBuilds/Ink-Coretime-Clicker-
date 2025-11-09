@@ -26,7 +26,7 @@ const FairnessPanel = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6">
+      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg">
         <h2 className="mb-4 text-2xl font-bold">Provably Fair Randomness</h2>
         <p className="mb-6 text-sm text-gray-400">
           All draws use commit-reveal randomness. You can verify the fairness
@@ -99,7 +99,7 @@ const FairnessPanel = () => {
         )}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6">
+      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg">
         <h3 className="mb-4 text-xl font-semibold">How to Verify</h3>
         <div className="space-y-3 text-sm text-gray-300">
           <div>

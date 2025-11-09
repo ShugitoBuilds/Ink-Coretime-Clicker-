@@ -104,13 +104,15 @@ const PlayPage = () => {
 
       {sessionStartTime && (
         <>
-          <div className="w-full rounded-2xl border border-white/10 bg-bg-panel p-6">
+          <div className="w-full rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg">
             <div className="mb-4 text-center">
-              <div className="text-5xl font-bold">{clicks}</div>
+              <div className="text-4xl font-bold text-primary transition-all duration-200 md:text-5xl">
+                {clicks}
+              </div>
               <div className="text-sm text-gray-400">Clicks</div>
             </div>
             <div className="text-center text-sm text-gray-400">
-              Duration: {sessionDuration}s
+              Duration: <span className="font-semibold text-gray-300">{sessionDuration}s</span>
             </div>
           </div>
 
@@ -123,14 +125,14 @@ const PlayPage = () => {
                 onMouseLeave={handleButtonUp}
                 onTouchStart={handleButtonDown}
                 onTouchEnd={handleButtonUp}
-                className={`h-64 w-64 rounded-full text-4xl font-bold transition-all ${
+                className={`relative h-48 w-48 rounded-full text-3xl font-bold transition-all duration-150 ease-out md:h-64 md:w-64 md:text-4xl ${
                   buttonState === "idle"
-                    ? "bg-primary text-bg-dark"
+                    ? "bg-primary text-bg-dark shadow-lg shadow-primary/50 hover:scale-105 active:scale-95"
                     : buttonState === "press"
-                    ? "bg-primary/80 scale-95"
+                    ? "bg-primary/90 scale-95 shadow-md"
                     : buttonState === "hold"
-                    ? "bg-primary/60 scale-90"
-                    : "bg-primary/50 scale-100"
+                    ? "bg-primary/70 scale-90 shadow-sm"
+                    : "bg-primary/60 scale-100"
                 }`}
                 style={{
                   backgroundImage:
@@ -145,7 +147,10 @@ const PlayPage = () => {
                   backgroundPosition: "center",
                 }}
               >
-                CLICK
+                <span className="relative z-10 drop-shadow-lg">CLICK</span>
+                {buttonState === "press" && (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
+                )}
               </button>
               <button
                 type="button"

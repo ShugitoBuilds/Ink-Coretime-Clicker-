@@ -15,19 +15,16 @@ npm run dev
 Create a `.env` file in this directory with:
 
 ```bash
-# For Paseo Asset Hub (Recommended Testnet)
-VITE_RPC_ENDPOINT=wss://paseo-asset-hub-rpc.polkadot.io
-
-# For Kusama Asset Hub (Direct Testing - Production Network)
-# VITE_RPC_ENDPOINT=wss://kusama-asset-hub-rpc.polkadot.io
+# For Astar Network (Polkadot Parachain)
+VITE_RPC_ENDPOINT=wss://rpc.astar.network
 
 VITE_PRIZE_POOL_ADDRESS=<deployed_prize_pool_address>
 VITE_RNG_ADDRESS=<deployed_rng_address>
 VITE_ENTRY_FEE=1000000000000
 VITE_REVEAL_WINDOW_BLOCKS=10
 VITE_RAKE_BPS=500
-VITE_TOKEN_DECIMALS=12
-VITE_TOKEN_SYMBOL=PAS  # Use KSM for Kusama Asset Hub
+VITE_TOKEN_DECIMALS=18
+VITE_TOKEN_SYMBOL=ASTR
 VITE_ADMIN_ADDRESS=<your_admin_address>
 VITE_USE_MOCK=false
 ```

@@ -2,6 +2,7 @@
 
 #[ink::contract]
 mod rng {
+    use ink::prelude::vec::Vec;
     use ink::storage::Mapping;
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
@@ -11,18 +12,18 @@ mod rng {
 
     pub type Result<T> = core::result::Result<T, ContractError>;
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
-    #[cfg_attr(feature = "std", derive(StorageLayout))]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(TypeInfo, StorageLayout))]
     pub struct Commitment {
         pub committer: AccountId,
         pub commit_hash: [u8; 32],
         pub reveal_block: u32,
         pub committed_at_block: u32,
         pub revealed: bool,
-        pub random_number: Option<u64>,
+        pub random_number: u64, // 0 means not revealed
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode, TypeInfo)]
     pub enum ContractError {
         InvalidCommitment,
         RevealTooEarly,
@@ -61,7 +62,7 @@ mod rng {
         #[ink(constructor)]
         pub fn new(min_reveal_blocks: u32) -> Self {
             Self {
-                commitments: Default::default(),
+                commitments: Mapping::new(),
                 commitment_counter: 0,
                 min_reveal_blocks,
             }
@@ -89,7 +90,7 @@ mod rng {
                 reveal_block,
                 committed_at_block: current_block,
                 revealed: false,
-                random_number: None,
+                random_number: 0, // Not revealed yet
             };
 
             self.commitments.insert(commitment_id, &commitment);
@@ -135,9 +136,12 @@ mod rng {
 
             // Generate random number from secret + block data
             let random_number = self.generate_random_number(&secret, current_block);
+            
+            // Ensure random_number is never 0 (sentinel value)
+            let random_number = if random_number == 0 { 1 } else { random_number };
 
             commitment.revealed = true;
-            commitment.random_number = Some(random_number);
+            commitment.random_number = random_number;
             self.commitments.insert(commitment_id, &commitment);
 
             self.env().emit_event(Revealed {
@@ -154,7 +158,11 @@ mod rng {
         pub fn get_random_number(&self, commitment_id: u32) -> Option<u64> {
             self.commitments
                 .get(commitment_id)
-                .and_then(|c| c.random_number)
+                .and_then(|c| if c.revealed && c.random_number != 0 {
+                    Some(c.random_number)
+                } else {
+                    None
+                })
         }
 
         #[ink(message)]
@@ -164,34 +172,22 @@ mod rng {
 
         fn hash_secret(&self, input: &[u8]) -> [u8; 32] {
             // Deterministic hash implementation for MVP
-            // Hash should only depend on input, not block data
-            // This ensures commit and reveal produce the same hash
+            // Simple XOR-based hash
             let mut output = [0u8; 32];
-            
-            // Simple deterministic hash: XOR input bytes
             for (i, byte) in input.iter().enumerate() {
                 output[i % 32] ^= *byte;
             }
-            
-            // Simple mixing function for better distribution
-            for i in 0..32 {
-                output[i] = output[i].wrapping_add(output[(i + 1) % 32]);
-                output[i] = output[i].wrapping_mul(17);
-            }
-            
             output
-        }
-
-        pub(crate) fn hash_secret_for_test(&self, input: &[u8]) -> [u8; 32] {
-            self.hash_secret(input)
         }
 
         fn generate_random_number(&self, secret: &[u8], block_number: u32) -> u64 {
             // Combine secret with block data for randomness
-            let mut combined = Vec::new();
-            combined.extend_from_slice(secret);
-            combined.extend_from_slice(&block_number.to_le_bytes());
-            combined.extend_from_slice(&self.env().block_timestamp().to_le_bytes());
+            // Use fixed-size array instead of Vec
+            let mut combined = [0u8; 64];
+            let secret_len = secret.len().min(32);
+            combined[..secret_len].copy_from_slice(&secret[..secret_len]);
+            combined[32..36].copy_from_slice(&block_number.to_le_bytes());
+            combined[36..44].copy_from_slice(&self.env().block_timestamp().to_le_bytes());
 
             // Simple hash to generate random number
             let mut hash_bytes = [0u8; 8];
@@ -233,7 +229,7 @@ mod rng {
             let reveal_block = 10;
 
             let secret = b"test_secret".to_vec();
-            let commit_hash = contract.hash_secret_for_test(&secret);
+            let commit_hash = contract.hash_secret(&secret);
 
             let commitment_id = contract.commit(commit_hash, reveal_block).expect("commit should succeed");
 
@@ -260,7 +256,7 @@ mod rng {
             let reveal_block = 10;
 
             let secret = b"test_secret".to_vec();
-            let commit_hash = contract.hash_secret_for_test(&secret);
+            let commit_hash = contract.hash_secret(&secret);
             let commitment_id = contract.commit(commit_hash, reveal_block).expect("commit should succeed");
 
             // Try to reveal too early (only advance 5 blocks, need 10)
@@ -279,7 +275,7 @@ mod rng {
             let reveal_block = 10;
 
             let secret = b"test_secret".to_vec();
-            let commit_hash = contract.hash_secret_for_test(&secret);
+            let commit_hash = contract.hash_secret(&secret);
             let commitment_id = contract.commit(commit_hash, reveal_block).expect("commit should succeed");
 
             advance_blocks(10);

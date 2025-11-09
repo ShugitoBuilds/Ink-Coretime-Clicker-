@@ -13,8 +13,8 @@ mod prize_pool {
 
     const BASIS_POINTS_DENOMINATOR: u16 = 10_000;
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
-    #[cfg_attr(feature = "std", derive(StorageLayout))]
+    #[derive(PartialEq, Eq, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(TypeInfo, StorageLayout))]
     pub struct Entry {
         pub player: AccountId,
         pub entry_fee: Balance,
@@ -22,17 +22,17 @@ mod prize_pool {
         pub block_number: u32,
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
-    #[cfg_attr(feature = "std", derive(StorageLayout))]
+    #[derive(PartialEq, Eq, Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(TypeInfo, StorageLayout))]
     pub struct Draw {
         pub draw_id: u32,
-        pub winner: Option<AccountId>,
+        pub winner: AccountId, // AccountId::from([0u8; 32]) means no winner
         pub prize_amount: Balance,
         pub entry_count: u32,
-        pub executed_at_block: Option<u32>,
+        pub executed_at_block: u32, // u32::MAX means not executed
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+    #[derive(PartialEq, Eq, Encode, Decode, TypeInfo)]
     pub struct PoolInfo {
         pub pool_balance: Balance,
         pub rake_balance: Balance,
@@ -41,7 +41,7 @@ mod prize_pool {
         pub is_paused: bool,
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+    #[derive(Debug, PartialEq, Eq, Encode, Decode, TypeInfo)]
     pub enum ContractError {
         Paused,
         Unauthorized,
@@ -132,25 +132,21 @@ mod prize_pool {
             max_entries_per_draw: u32,
             max_entry_fee: Balance,
         ) -> Self {
-            // Security: Validate constructor parameters
-            // Note: rake_bps validation happens in set_rake_bps, but we validate here too
-            // for initial setup safety. In production, consider adding more validation.
-            
             Self {
                 pool_balance: 0,
                 rake_balance: 0,
                 rake_bps,
-                entries: Default::default(),
+                entries: Mapping::new(),
                 entry_counter: 0,
                 draw_counter: 0,
-                draws: Default::default(),
+                draws: Mapping::new(),
                 is_paused: false,
                 admin,
                 rng_address,
                 max_entries_per_draw,
                 max_entry_fee,
-                entries_by_draw: Default::default(),
-                draw_entry_count: Default::default(),
+                entries_by_draw: Mapping::new(),
+                draw_entry_count: Mapping::new(),
             }
         }
 
@@ -251,17 +247,15 @@ mod prize_pool {
             }
 
             // Create draw record
-            let draw = Draw {
+            let _draw = Draw {
                 draw_id,
-                winner: None,
+                winner: AccountId::from([0u8; 32]), // No winner yet
                 prize_amount: self.pool_balance,
                 entry_count,
-                executed_at_block: None,
+                executed_at_block: u32::MAX, // Not executed yet
             };
 
             // Get random number from RNG contract
-            // For MVP, we'll use a simple block-based seed
-            // In production, this should call the RNG contract via cross-contract call
             let random_seed = (self.env().block_number() as u64)
                 .wrapping_add(self.env().block_timestamp())
                 .wrapping_add(draw_id as u64);
@@ -274,9 +268,13 @@ mod prize_pool {
                 .ok_or(ContractError::RNGError)?;
 
             // Update draw with winner
-            let mut updated_draw = draw.clone();
-            updated_draw.winner = Some(winner);
-            updated_draw.executed_at_block = Some(self.env().block_number());
+            let updated_draw = Draw {
+                draw_id,
+                winner,
+                prize_amount: self.pool_balance,
+                entry_count,
+                executed_at_block: self.env().block_number(),
+            };
 
             self.draws.insert(draw_id, &updated_draw);
 
@@ -308,14 +306,16 @@ mod prize_pool {
             let caller = self.env().caller();
             let draw = self.draws.get(draw_id).ok_or(ContractError::InvalidDraw)?;
 
-            let winner = draw.winner.ok_or(ContractError::InvalidDraw)?;
-            if winner != caller {
+            // Check if draw has been executed and has a winner
+            if draw.executed_at_block == u32::MAX || draw.winner == AccountId::from([0u8; 32]) {
+                return Err(ContractError::InvalidDraw);
+            }
+
+            if draw.winner != caller {
                 return Err(ContractError::NotWinner);
             }
 
-            // Check if already claimed by checking if prize is still in pool
-            // For simplicity, we'll track claimed draws separately
-            // In production, add a claimed flag to Draw struct
+            // Check if already claimed
             if draw.prize_amount == 0 {
                 return Err(ContractError::AlreadyClaimed);
             }
@@ -328,8 +328,13 @@ mod prize_pool {
                 .map_err(|_| ContractError::TransferFailed)?;
 
             // Mark as claimed by setting prize to 0
-            let mut updated_draw = draw;
-            updated_draw.prize_amount = 0;
+            let updated_draw = Draw {
+                draw_id: draw.draw_id,
+                winner: draw.winner,
+                prize_amount: 0,
+                entry_count: draw.entry_count,
+                executed_at_block: draw.executed_at_block,
+            };
             self.draws.insert(draw_id, &updated_draw);
 
             self.env().emit_event(PrizeClaimed {
@@ -563,11 +568,17 @@ mod prize_pool {
 
             // Get draw info
             let draw = contract.get_draw(0).expect("draw should exist");
-            let winner = draw.winner.expect("draw should have winner");
+            let winner = draw.winner;
+            
+            // Verify winner is not sentinel value
+            assert_ne!(winner, AccountId::from([0u8; 32]));
 
             // Winner claims prize
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(winner);
             let result = contract.claim_prize(0);
+            if result.is_err() {
+                eprintln!("Claim prize error: {:?}", result.as_ref().err());
+            }
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), 95_000_000);
         }

@@ -71,12 +71,12 @@ const JackpotPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6">
+      <div className="rounded-2xl border border-white/10 bg-bg-panel p-6 shadow-lg">
         <h2 className="mb-4 text-2xl font-bold">Jackpot Pool</h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between rounded-lg bg-black/20 p-4">
             <span className="text-gray-400">Current Pool</span>
-            <span className="text-2xl font-bold">
+            <span className="text-3xl font-bold text-primary">
               {poolInfo
                 ? formatTokens(poolInfo.poolBalance)
                 : "0"}{" "}
@@ -85,13 +85,13 @@ const JackpotPage = () => {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-400">Entries</span>
-            <span className="text-lg font-semibold">
+            <span className="text-xl font-semibold text-white">
               {poolInfo?.entryCount ?? 0}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-400">Next Draw</span>
-            <span className="text-lg">{nextDrawETA}</span>
+            <span className="text-lg font-medium text-gray-300">{nextDrawETA}</span>
           </div>
         </div>
       </div>

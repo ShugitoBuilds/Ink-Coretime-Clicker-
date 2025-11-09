@@ -32,7 +32,7 @@ const TopBar = () => {
       <div>
         <h1 className="text-3xl font-semibold text-primary">CoreTime Clicker</h1>
         <p className="text-sm text-gray-300">
-          Simple clicker game with a paid-entry jackpot system on Kusama Asset Hub.
+          Simple clicker game with a paid-entry jackpot system on Astar Network.
         </p>
       </div>
 

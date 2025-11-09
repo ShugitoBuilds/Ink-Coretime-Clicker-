@@ -1,11 +1,13 @@
 # Testnet Deployment Guide
 
 ## Overview
-This guide walks through deploying the CoreTime Clicker contracts to a testnet and testing the complete system. 
+This guide walks through deploying the CoreTime Clicker contracts to Astar Network and testing the complete system. 
 
 **Recommended Options:**
-1. **Paseo Asset Hub** (Recommended) - Official testnet for Kusama Asset Hub
-2. **Kusama Asset Hub** (Direct Testing) - Test directly on production network with small amounts
+1. **Astar Network Mainnet** (Recommended) - Production Polkadot parachain with standard ink! contract support
+2. **Shibuya Testnet** (Optional) - Astar's testnet (may have faucet issues)
+
+**Note:** Astar Network is a Polkadot parachain that supports standard ink! smart contracts via `pallet-contracts`. This is different from Asset Hub chains which don't currently support ink! contracts.
 
 ## Prerequisites
 
@@ -14,9 +16,9 @@ This guide walks through deploying the CoreTime Clicker contracts to a testnet a
    - Create or import testnet account
    - Fund account with test tokens (use faucet if needed)
 
-2. **Testnet RPC Endpoints**
-   - **Paseo Asset Hub** (Recommended): `wss://paseo-asset-hub-rpc.polkadot.io`
-   - **Kusama Asset Hub** (Direct Testing): `wss://kusama-asset-hub-rpc.polkadot.io`
+2. **Network RPC Endpoints**
+   - **Astar Network Mainnet**: `wss://rpc.astar.network`
+   - **Shibuya Testnet**: `wss://rpc.shiden.astar.network` (if available)
    - **Local Testnet**: `ws://127.0.0.1:9944`
 
 3. **Required Tools**
@@ -34,79 +36,58 @@ This guide walks through deploying the CoreTime Clicker contracts to a testnet a
 - **rake_bps**: `500` (5% rake)
 - **rng_address**: Will be set after RNG deployment
 - **max_entries_per_draw**: `100`
-- **max_entry_fee**: `1000000000000` (1 token with 12 decimals)
+- **max_entry_fee**: `1000000000000` (1 ASTR with 18 decimals = 1,000,000,000,000,000,000 planck units)
 
 ## Step 2: Deploy RNG Contract
 
 ### Using cargo-contract CLI
 
-**For Paseo Asset Hub:**
+**For Astar Network Mainnet (Recommended):**
 ```bash
 # Navigate to project root
 cd /path/to/Ink-Coretime-Clicker-
 
-# Deploy RNG contract to Paseo Asset Hub
+# Deploy RNG contract to Astar Network
+# Use the provided deployment script:
+./scripts/deploy_rng.sh
+
+# Or manually:
 cargo contract instantiate \
   --manifest-path contracts/rng/Cargo.toml \
   --constructor new \
   --args "10" \
-  --suri "//Alice" \
-  --url wss://paseo-asset-hub-rpc.polkadot.io \
+  --suri "YOUR_SEED_PHRASE" \
+  --url wss://rpc.astar.network \
   --execute
 ```
 
-**For Kusama Asset Hub (Direct Testing):**
-```bash
-# Deploy RNG contract directly to Kusama Asset Hub
-cargo contract instantiate \
-  --manifest-path contracts/rng/Cargo.toml \
-  --constructor new \
-  --args "10" \
-  --suri "//Alice" \
-  --url wss://kusama-asset-hub-rpc.polkadot.io \
-  --execute
-```
+**Note:** You'll need ASTR tokens for deployment. Use small amounts for testing.
 
 ### Using Polkadot.js Apps UI
 
-**For Paseo Asset Hub:**
-1. Navigate to [Polkadot.js Apps - Paseo](https://polkadot.js.org/apps/?rpc=wss://paseo-asset-hub-rpc.polkadot.io)
-2. Connect to Paseo Asset Hub network
+**For Astar Network:**
+1. Navigate to [Polkadot.js Apps - Astar](https://polkadot.js.org/apps/?rpc=wss://rpc.astar.network)
+2. Connect to Astar Network
 3. Go to **Developer** → **Contracts** → **Upload & deploy code**
 4. Upload `artifacts/rng.contract`
 5. Select `new` constructor
 6. Enter parameter: `min_reveal_blocks = 10`
-7. Set endowment (storage deposit): ~2-3 PAS tokens
+7. Set endowment (storage deposit): ~2-3 ASTR tokens
 8. Submit and sign transaction
 9. **Record the deployed contract address**
 
-**For Kusama Asset Hub (Direct Testing):**
-1. Navigate to [Polkadot.js Apps - Kusama Asset Hub](https://polkadot.js.org/apps/?rpc=wss://kusama-asset-hub-rpc.polkadot.io)
-2. Connect to Kusama Asset Hub network
-3. Follow same steps as above, but use KSM tokens (small amounts recommended)
-4. **Record the deployed contract address**
+**Note:** Make sure you have ASTR tokens in your account. You can get them from exchanges or use the Astar faucet if available.
 
 ## Step 3: Deploy PrizePool Contract
 
 ### Using cargo-contract CLI
 
-**For Paseo Asset Hub:**
+**For Astar Network Mainnet:**
 ```bash
-cargo contract instantiate \
-  --manifest-path contracts/prize_pool/Cargo.toml \
-  --constructor new \
-  --args "YOUR_ADMIN_ADDRESS" \
-  --args "500" \
-  --args "RNG_CONTRACT_ADDRESS" \
-  --args "100" \
-  --args "1000000000000" \
-  --suri "//Alice" \
-  --url wss://paseo-asset-hub-rpc.polkadot.io \
-  --execute
-```
+# Use the provided deployment script:
+./scripts/deploy_prize_pool.sh <RNG_CONTRACT_ADDRESS>
 
-**For Kusama Asset Hub (Direct Testing):**
-```bash
+# Or manually:
 cargo contract instantiate \
   --manifest-path contracts/prize_pool/Cargo.toml \
   --constructor new \
@@ -115,8 +96,8 @@ cargo contract instantiate \
   --args "RNG_CONTRACT_ADDRESS" \
   --args "100" \
   --args "1000000000000" \
-  --suri "//Alice" \
-  --url wss://kusama-asset-hub-rpc.polkadot.io \
+  --suri "YOUR_SEED_PHRASE" \
+  --url wss://rpc.astar.network \
   --execute
 ```
 
@@ -125,66 +106,34 @@ cargo contract instantiate \
 1. Upload `artifacts/prize_pool.contract`
 2. Select `new` constructor
 3. Enter parameters:
-   - `admin`: Your testnet admin address
+   - `admin`: Your admin address
    - `rake_bps`: `500`
    - `rng_address`: RNG contract address from Step 2
    - `max_entries_per_draw`: `100`
-   - `max_entry_fee`: `1000000000000`
-4. Set endowment: ~3-5 tokens (PAS for Paseo, KSM for Kusama)
+   - `max_entry_fee`: `1000000000000` (1 ASTR = 1,000,000,000,000,000,000 planck units)
+4. Set endowment: ~3-5 ASTR tokens
 5. Submit and sign transaction
 6. **Record the deployed contract address**
 
 ## Step 4: Update Frontend Configuration
 
-### Option 1: Paseo Asset Hub (Recommended)
-
-Create `frontend/.env.paseo`:
+Create `frontend/.env`:
 
 ```env
-# Paseo Asset Hub Testnet Configuration
-VITE_RPC_ENDPOINT=wss://paseo-asset-hub-rpc.polkadot.io
+# Astar Network Configuration
+VITE_RPC_ENDPOINT=wss://rpc.astar.network
 VITE_PRIZE_POOL_ADDRESS=<deployed_prize_pool_address>
 VITE_RNG_ADDRESS=<deployed_rng_address>
 VITE_ENTRY_FEE=1000000000000
 VITE_REVEAL_WINDOW_BLOCKS=10
 VITE_RAKE_BPS=500
-VITE_TOKEN_DECIMALS=12
-VITE_TOKEN_SYMBOL=PAS
+VITE_TOKEN_DECIMALS=18
+VITE_TOKEN_SYMBOL=ASTR
 VITE_ADMIN_ADDRESS=<your_admin_address>
 VITE_USE_MOCK=false
 ```
 
-### Option 2: Kusama Asset Hub (Direct Testing)
-
-Create `frontend/.env.kusama`:
-
-```env
-# Kusama Asset Hub Configuration (Direct Testing)
-VITE_RPC_ENDPOINT=wss://kusama-asset-hub-rpc.polkadot.io
-VITE_PRIZE_POOL_ADDRESS=<deployed_prize_pool_address>
-VITE_RNG_ADDRESS=<deployed_rng_address>
-VITE_ENTRY_FEE=1000000000000
-VITE_REVEAL_WINDOW_BLOCKS=10
-VITE_RAKE_BPS=500
-VITE_TOKEN_DECIMALS=12
-VITE_TOKEN_SYMBOL=KSM
-VITE_ADMIN_ADDRESS=<your_admin_address>
-VITE_USE_MOCK=false
-```
-
-### Copy to `.env`:
-
-**For Paseo:**
-```bash
-cp frontend/.env.paseo frontend/.env
-```
-
-**For Kusama:**
-```bash
-cp frontend/.env.kusama frontend/.env
-```
-
-**Note**: When testing directly on Kusama Asset Hub, use small amounts of real KSM. This is the actual production network.
+**Note**: ASTR has 18 decimals, so `1000000000000` planck units = 0.000001 ASTR (very small amount).
 
 ## Step 5: Copy Contract Metadata
 
@@ -334,16 +283,12 @@ Use block explorer or event query tools to verify.
 
 ## Getting Test Tokens
 
-### Paseo Asset Hub (PAS tokens)
-- Visit [Polkadot.js Apps - Paseo](https://polkadot.js.org/apps/?rpc=wss://paseo-asset-hub-rpc.polkadot.io)
-- Use the faucet or request tokens from community channels
-- Check Paseo documentation for current faucet availability
-
-### Kusama Asset Hub (KSM tokens)
-- **Note**: This is the production network - use real KSM
-- Obtain KSM from exchanges or faucets
-- Use small amounts for testing (recommended: < 0.1 KSM per test)
-- Be aware that transactions cost real KSM
+### Astar Network (ASTR tokens)
+- **Mainnet**: Obtain ASTR from exchanges (Coinbase, Binance, Kraken, etc.)
+- **Testnet (Shibuya)**: May have faucet issues - check Astar Discord/Telegram for current status
+- **Recommendation**: Use mainnet with small amounts for testing (recommended: < 1 ASTR per test)
+- ASTR has 18 decimals, so very small amounts can be used for testing
+- Check [Astar Network Explorer](https://astar.subscan.io/) for network status
 
 ## Troubleshooting
 

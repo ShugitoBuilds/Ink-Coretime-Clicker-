@@ -1,6 +1,6 @@
 # CoreTime Clicker
 
-A simple clicker game with a paid-entry jackpot system, built on Polkadot/Kusama Asset Hub using ink! smart contracts.
+A simple clicker game with a paid-entry jackpot system, built on Astar Network (Polkadot parachain) using ink! smart contracts.
 
 ## Overview
 
@@ -23,8 +23,9 @@ The system includes:
 - Rust toolchain (`rustup`, `cargo`) with:
   - `wasm32-unknown-unknown` target
   - `rust-src` component
-- `cargo-contract` **v3.2.0** (compatible with ink! 4.3)
+- `cargo-contract` **v3.2.0** (compatible with ink! 4.3) - for building contracts
 - Node.js ≥ 18 with npm
+- **Swanky CLI** (for deployment) - install via: `npm install -g @astar-network/swanky-cli`
 
 ### Build Contracts
 
@@ -42,24 +43,51 @@ Build outputs are in `contracts/*/target/ink/` and copied to `artifacts/`:
 
 ### Deploy Contracts
 
-#### Kusama Asset Hub
+#### Astar Network (Polkadot Parachain)
 
-1. Upload `artifacts/prize_pool.contract` using `cargo-contract upload` or [Polkadot.js Apps UI](https://polkadot.js.org/apps/?rpc=wss://kusama-asset-hub-rpc.polkadot.io)
-2. Upload `artifacts/rng.contract` similarly
-3. Instantiate PrizePool with constructor parameters:
-   - `admin`: Your admin account address
-   - `rake_bps`: Rake in basis points (e.g., 500 = 5%)
-   - `rng_address`: The RNG contract address
-   - `max_entries_per_draw`: Maximum entries per draw (e.g., 100)
-   - `max_entry_fee`: Maximum entry fee in planck units
-4. Record the deployed contract addresses
+**Prerequisites for Deployment:**
+- Ensure contracts are built (see Build Contracts section above)
+- Have ASTR tokens in your deployment account (configured in `swanky.config.json`)
+- Swanky CLI installed: `npm install -g @astar-network/swanky-cli`
 
-#### Polkadot Asset Hub (Future)
+**Using Swanky CLI (Recommended - Windows Native):**
 
-When ink! contracts are enabled on Polkadot Asset Hub:
-1. Update `VITE_RPC_ENDPOINT` to Polkadot Asset Hub RPC
-2. Deploy contracts using the same process
-3. No code changes needed - fully environment-driven
+**PowerShell (Windows):**
+```powershell
+# 1. Deploy RNG contract
+.\scripts\deploy_rng.ps1
+
+# 2. Deploy PrizePool contract (replace with actual RNG address)
+.\scripts\deploy_prize_pool.ps1 <RNG_CONTRACT_ADDRESS>
+```
+
+**Bash (Linux/WSL):**
+```bash
+# 1. Deploy RNG contract
+./scripts/deploy_rng.sh
+
+# 2. Deploy PrizePool contract (replace with actual RNG address)
+./scripts/deploy_prize_pool.sh <RNG_CONTRACT_ADDRESS>
+```
+
+**Manual Swanky CLI Commands:**
+```bash
+# Deploy RNG
+swanky contract deploy rng --network astar --account deployer --constructorName new --args 10
+
+# Deploy PrizePool (replace <RNG_ADDRESS> with actual address)
+swanky contract deploy prize_pool --network astar --account deployer --constructorName new \
+  --args WiHuQ9BotHZdtFr1ixaF6oVkuyzD1KqZCqRXXfj6MvDjmgC \
+  --args 500 \
+  --args <RNG_ADDRESS> \
+  --args 100 \
+  --args 1000000000000
+```
+
+**Configuration:**
+- Account and network settings are configured in `swanky.config.json`
+- Default admin address: `WiHuQ9BotHZdtFr1ixaF6oVkuyzD1KqZCqRXXfj6MvDjmgC`
+- Network: Astar mainnet (`wss://rpc.astar.network`)
 
 ### Frontend Setup
 
@@ -74,7 +102,7 @@ Create `.env` in `frontend/`:
 
 ```env
 # RPC Endpoint
-VITE_RPC_ENDPOINT=wss://kusama-asset-hub-rpc.polkadot.io
+VITE_RPC_ENDPOINT=wss://rpc.astar.network
 
 # Contract Addresses
 VITE_PRIZE_POOL_ADDRESS=<deployed_prize_pool_address>
@@ -84,8 +112,8 @@ VITE_RNG_ADDRESS=<deployed_rng_address>
 VITE_ENTRY_FEE=1000000000000
 VITE_REVEAL_WINDOW_BLOCKS=10
 VITE_RAKE_BPS=500
-VITE_TOKEN_DECIMALS=12
-VITE_TOKEN_SYMBOL=KSM
+VITE_TOKEN_DECIMALS=18
+VITE_TOKEN_SYMBOL=ASTR
 
 # Optional: Use mock mode if contracts not deployed
 # VITE_USE_MOCK=true
@@ -95,14 +123,14 @@ VITE_TOKEN_SYMBOL=KSM
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_RPC_ENDPOINT` | RPC endpoint for Kusama/Polkadot Asset Hub | `wss://kusama-asset-hub-rpc.polkadot.io` |
+| `VITE_RPC_ENDPOINT` | RPC endpoint for Astar Network | `wss://rpc.astar.network` |
 | `VITE_PRIZE_POOL_ADDRESS` | Deployed PrizePool contract address | (required) |
 | `VITE_RNG_ADDRESS` | Deployed RNG contract address | (required) |
 | `VITE_ENTRY_FEE` | Default entry fee in planck units | `1000000000000` |
 | `VITE_REVEAL_WINDOW_BLOCKS` | Minimum blocks before reveal | `10` |
 | `VITE_RAKE_BPS` | Rake in basis points (500 = 5%) | `500` |
-| `VITE_TOKEN_DECIMALS` | Token decimals | `12` |
-| `VITE_TOKEN_SYMBOL` | Token symbol | `KSM` |
+| `VITE_TOKEN_DECIMALS` | Token decimals | `18` |
+| `VITE_TOKEN_SYMBOL` | Token symbol | `ASTR` |
 | `VITE_USE_MOCK` | Use mock mode (no contract calls) | `true` if no addresses set |
 
 ## Contract Metadata
@@ -118,7 +146,7 @@ After rebuilding contracts, update the frontend metadata files:
 See [Testnet Deployment Guide](.cursor/plans/plan-6-testnet-deployment-guide.md) for detailed instructions.
 
 **Quick Steps:**
-1. Deploy RNG contract to testnet (Paseo Asset Hub recommended, or Kusama Asset Hub for direct testing)
+1. Deploy RNG contract to Astar Network mainnet (or Shibuya testnet if available)
 2. Deploy PrizePool contract with RNG address
 3. Update frontend `.env` with contract addresses
 4. Test end-to-end functionality
@@ -129,7 +157,7 @@ See [Production Deployment Guide](.cursor/plans/plan-8-production-deployment-gui
 
 **Quick Steps:**
 1. Complete [Production Preparation Checklist](.cursor/plans/plan-7-production-preparation-checklist.md)
-2. Deploy contracts to Kusama Asset Hub
+2. Deploy contracts to Astar Network (Polkadot parachain)
 3. Deploy frontend to hosting platform
 4. Verify all functionality
 5. Monitor for issues
@@ -246,6 +274,62 @@ Theme variables are in `frontend/src/styles/theme.css`. Update CSS variables to 
 ## License
 
 This project is open source. See LICENSE file for details.
+
+## User Guide
+
+### Getting Started
+
+1. **Install Polkadot.js Extension**
+   - Download from [polkadot.js.org/extension](https://polkadot.js.org/extension/)
+   - Create or import an account
+   - Make sure you're on Astar Network
+
+2. **Get ASTR Tokens**
+   - Purchase ASTR from exchanges (Coinbase, Binance, Kraken, etc.)
+   - Or use Polkaswap to swap other tokens for ASTR
+   - Transfer ASTR to your wallet address
+
+3. **Connect Wallet**
+   - Open the CoreTime Clicker app
+   - Click "Connect Wallet"
+   - Select your account from the Polkadot.js extension
+
+4. **Play the Game**
+   - Click "Start Session"
+   - Click the button to accumulate points
+   - Click "End Session" when done
+   - Enter the jackpot by paying the entry fee
+
+5. **Check Jackpot**
+   - Navigate to the "Jackpot" tab
+   - View current pool balance and entries
+   - Winners are selected via provably fair randomness
+
+### Troubleshooting
+
+**Wallet Connection Issues:**
+- Ensure Polkadot.js extension is installed and unlocked
+- Refresh the page and try connecting again
+- Check that you're connected to Astar Network in the extension
+
+**Transaction Failures:**
+- Verify you have sufficient ASTR balance (need ~0.001 ASTR for gas + entry fee)
+- Check that the contract is not paused (admin can pause for maintenance)
+- Ensure you're not exceeding max entries per draw
+
+**Balance Not Updating:**
+- Refresh the page
+- Check your wallet balance on [Astar Explorer](https://astar.subscan.io/)
+- Verify contract addresses are correct in `.env`
+
+**Getting ASTR Tokens:**
+- **Exchanges**: Coinbase, Binance, Kraken, Gate.io
+- **DEX**: Polkaswap (swap DOT/USDC/etc. for ASTR)
+- **Bridge**: Use Astar Portal to bridge from other chains
+
+**Network Issues:**
+- If RPC endpoint is slow, try alternative: `wss://astar-rpc.dwellir.com`
+- Check [Astar Network Status](https://status.astar.network/)
 
 ## Support
 

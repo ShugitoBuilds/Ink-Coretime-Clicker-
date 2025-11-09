@@ -1,5 +1,5 @@
 export const RPC_ENDPOINT =
-  import.meta.env.VITE_RPC_ENDPOINT ?? "wss://kusama-asset-hub-rpc.polkadot.io";
+  import.meta.env.VITE_RPC_ENDPOINT ?? "wss://rpc.astar.network";
 
 export const PRIZE_POOL_ADDRESS = import.meta.env.VITE_PRIZE_POOL_ADDRESS ?? "";
 
@@ -24,11 +24,11 @@ export const RAKE_BPS = Number(
 );
 
 export const TOKEN_DECIMALS = Number(
-  import.meta.env.VITE_TOKEN_DECIMALS ?? 12,
+  import.meta.env.VITE_TOKEN_DECIMALS ?? 18,
 );
 
 export const TOKEN_SYMBOL =
-  import.meta.env.VITE_TOKEN_SYMBOL ?? "KSM";
+  import.meta.env.VITE_TOKEN_SYMBOL ?? "ASTR";
 
 const defaultMockSetting =
   PRIZE_POOL_ADDRESS.length === 0 ? "true" : "false";
